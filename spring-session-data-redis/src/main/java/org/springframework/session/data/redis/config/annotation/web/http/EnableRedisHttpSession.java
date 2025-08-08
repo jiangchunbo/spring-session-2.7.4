@@ -53,13 +53,13 @@ import org.springframework.session.web.http.SessionRepositoryFilter;
  *
  * }
  * </pre>
- *
+ * <p>
  * More advanced configurations can extend {@link RedisHttpSessionConfiguration} instead.
  *
  * @author Rob Winch
  * @author Vedran Pavic
- * @since 1.0
  * @see EnableSpringHttpSession
+ * @since 1.0
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.TYPE)
@@ -71,6 +71,9 @@ public @interface EnableRedisHttpSession {
 	/**
 	 * The session timeout in seconds. By default, it is set to 1800 seconds (30 minutes).
 	 * This should be a non-negative integer.
+	 * <p>
+	 * Session 超时时间，单位是 秒。
+	 *
 	 * @return the seconds a session can be inactive before expiring
 	 */
 	int maxInactiveIntervalInSeconds() default MapSession.DEFAULT_MAX_INACTIVE_INTERVAL_SECONDS;
@@ -83,6 +86,7 @@ public @interface EnableRedisHttpSession {
 	 * For example, if you had an application named "Application A" that needed to keep
 	 * the sessions isolated from "Application B" you could set two different values for
 	 * the applications and they could function within the same Redis instance.
+	 *
 	 * @return the unique namespace for keys
 	 */
 	String redisNamespace() default RedisIndexedSessionRepository.DEFAULT_NAMESPACE;
@@ -94,6 +98,7 @@ public @interface EnableRedisHttpSession {
 	 * <p>
 	 * Setting the value to {@code IMMEDIATE} will ensure that the any updates to the
 	 * Session are immediately written to the Redis instance.
+	 *
 	 * @return the {@link RedisFlushMode} to use
 	 * @since 1.1
 	 * @deprecated since 2.2.0 in favor of {@link #flushMode()}
@@ -108,6 +113,7 @@ public @interface EnableRedisHttpSession {
 	 * <p>
 	 * Setting the value to {@code IMMEDIATE} will ensure that the any updates to the
 	 * Session are immediately written to the Redis instance.
+	 *
 	 * @return the {@link FlushMode} to use
 	 * @since 2.2.0
 	 */
@@ -115,6 +121,7 @@ public @interface EnableRedisHttpSession {
 
 	/**
 	 * The cron expression for expired session cleanup job. By default runs every minute.
+	 *
 	 * @return the session cleanup cron expression
 	 * @since 2.0.0
 	 */
@@ -123,6 +130,7 @@ public @interface EnableRedisHttpSession {
 	/**
 	 * Save mode for the session. The default is {@link SaveMode#ON_SET_ATTRIBUTE}, which
 	 * only saves changes made to session.
+	 *
 	 * @return the save mode
 	 * @since 2.2.0
 	 */
