@@ -41,13 +41,13 @@ import org.springframework.session.SessionRepository;
 /**
  * Switches the {@link javax.servlet.http.HttpSession} implementation to be backed by a
  * {@link org.springframework.session.Session}.
- *
+ * <p>
  * The {@link SessionRepositoryFilter} wraps the
  * {@link javax.servlet.http.HttpServletRequest} and overrides the methods to get an
  * {@link javax.servlet.http.HttpSession} to be backed by a
  * {@link org.springframework.session.Session} returned by the
  * {@link org.springframework.session.SessionRepository}.
- *
+ * <p>
  * The {@link SessionRepositoryFilter} uses a {@link HttpSessionIdResolver} (default
  * {@link CookieHttpSessionIdResolver}) to bridge logic between an
  * {@link javax.servlet.http.HttpSession} and the
@@ -107,6 +107,7 @@ public class SessionRepositoryFilter<S extends Session> extends OncePerRequestFi
 
 	/**
 	 * Creates a new instance.
+	 *
 	 * @param sessionRepository the <code>SessionRepository</code> to use. Cannot be null.
 	 */
 	public SessionRepositoryFilter(SessionRepository<S> sessionRepository) {
@@ -119,8 +120,9 @@ public class SessionRepositoryFilter<S extends Session> extends OncePerRequestFi
 	/**
 	 * Sets the {@link HttpSessionIdResolver} to be used. The default is a
 	 * {@link CookieHttpSessionIdResolver}.
+	 *
 	 * @param httpSessionIdResolver the {@link HttpSessionIdResolver} to use. Cannot be
-	 * null.
+	 *                              null.
 	 */
 	public void setHttpSessionIdResolver(HttpSessionIdResolver httpSessionIdResolver) {
 		if (httpSessionIdResolver == null) {
@@ -135,20 +137,20 @@ public class SessionRepositoryFilter<S extends Session> extends OncePerRequestFi
 		request.setAttribute(SESSION_REPOSITORY_ATTR, this.sessionRepository);
 
 		SessionRepositoryRequestWrapper wrappedRequest = new SessionRepositoryRequestWrapper(request, response);
-		SessionRepositoryResponseWrapper wrappedResponse = new SessionRepositoryResponseWrapper(wrappedRequest,
-				response);
+		SessionRepositoryResponseWrapper wrappedResponse = new SessionRepositoryResponseWrapper(wrappedRequest, response);
 
 		try {
 			filterChain.doFilter(wrappedRequest, wrappedResponse);
-		}
-		finally {
+		} finally {
+			// 提交会话，也就是每次请求完毕，都会 commit session
+			// 而且，这是一个 finally 逻辑，总是执行
 			wrappedRequest.commitSession();
 		}
 	}
 
 	@Override
 	protected void doFilterNestedErrorDispatch(HttpServletRequest request, HttpServletResponse response,
-			FilterChain filterChain) throws ServletException, IOException {
+											   FilterChain filterChain) throws ServletException, IOException {
 		doFilterInternal(request, response, filterChain);
 	}
 
@@ -164,7 +166,8 @@ public class SessionRepositoryFilter<S extends Session> extends OncePerRequestFi
 
 		/**
 		 * Create a new {@link SessionRepositoryResponseWrapper}.
-		 * @param request the request to be wrapped
+		 *
+		 * @param request  the request to be wrapped
 		 * @param response the response to be wrapped
 		 */
 		SessionRepositoryResponseWrapper(SessionRepositoryRequestWrapper request, HttpServletResponse response) {
@@ -196,8 +199,14 @@ public class SessionRepositoryFilter<S extends Session> extends OncePerRequestFi
 
 		private S requestedSession;
 
+		/**
+		 * 这个属性就是标志是否初始化过会话
+		 */
 		private boolean requestedSessionCached;
 
+		/**
+		 * 可能是无效的会话 ID，也可能是有效的 ID，具体还是看到底能否通过这个从 SessionRepository 找到会话对象
+		 */
 		private String requestedSessionId;
 
 		private Boolean requestedSessionIdValid;
@@ -214,15 +223,23 @@ public class SessionRepositoryFilter<S extends Session> extends OncePerRequestFi
 		 * and persist the Session.
 		 */
 		private void commitSession() {
+			// 获取当前 session
 			HttpSessionWrapper wrappedSession = getCurrentSession();
+
+			// 如果当前没有 session
 			if (wrappedSession == null) {
+				// 再次判断如果当前 session 是 null，并且 requestedSessionInvalidated 是 true
 				if (isInvalidateClientSession()) {
+					// 使用 HttpSessionIdResolver(很重要) 执行其 expireSession
 					SessionRepositoryFilter.this.httpSessionIdResolver.expireSession(this, this.response);
 				}
-			}
-			else {
+			} else {
+				// 获取其中的 session
 				S session = wrappedSession.getSession();
+
 				clearRequestedSessionCache();
+
+				// 保存到仓库中
 				SessionRepositoryFilter.this.sessionRepository.save(session);
 				String sessionId = session.getId();
 				if (!isRequestedSessionIdValid() || !sessionId.equals(getRequestedSessionId())) {
@@ -231,6 +248,10 @@ public class SessionRepositoryFilter<S extends Session> extends OncePerRequestFi
 			}
 		}
 
+		/**
+		 * 获取当前会话，
+		 * @return
+		 */
 		@SuppressWarnings("unchecked")
 		private HttpSessionWrapper getCurrentSession() {
 			return (HttpSessionWrapper) getAttribute(CURRENT_SESSION_ATTR);
@@ -239,8 +260,7 @@ public class SessionRepositoryFilter<S extends Session> extends OncePerRequestFi
 		private void setCurrentSession(HttpSessionWrapper currentSession) {
 			if (currentSession == null) {
 				removeAttribute(CURRENT_SESSION_ATTR);
-			}
-			else {
+			} else {
 				setAttribute(CURRENT_SESSION_ATTR, currentSession);
 			}
 		}
@@ -297,8 +317,7 @@ public class SessionRepositoryFilter<S extends Session> extends OncePerRequestFi
 					setCurrentSession(currentSession);
 					return currentSession;
 				}
-			}
-			else {
+			} else {
 				// This is an invalid session id. No need to ask again if
 				// request.getSession is invoked for the duration of this request
 				if (SESSION_LOGGER.isDebugEnabled()) {
@@ -347,19 +366,39 @@ public class SessionRepositoryFilter<S extends Session> extends OncePerRequestFi
 		}
 
 		private S getRequestedSession() {
+
+			// requestedSessionCached 只有 1 次
+
 			if (!this.requestedSessionCached) {
+
+				// @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+				// 调用重要的 HttpSessionIdResolver 解析 SessionId
 				List<String> sessionIds = SessionRepositoryFilter.this.httpSessionIdResolver.resolveSessionIds(this);
+
+				// 可能解析多个
 				for (String sessionId : sessionIds) {
+					// init: 只是初始化而已
 					if (this.requestedSessionId == null) {
 						this.requestedSessionId = sessionId;
 					}
+
+					// 从仓库找这和会话对象
 					S session = SessionRepositoryFilter.this.sessionRepository.findById(sessionId);
+
+					// 如果找到了这个会话对象，就表示这是有效的 Session ID
 					if (session != null) {
+						// 记录下这个有效的会话对象
 						this.requestedSession = session;
+						// 如果会话对象是真实的，就覆盖，如果从未覆盖，那么就可能解析到一个无效的会话ID
+						// 所以 requestedSessionId 可能有效、可能无效
 						this.requestedSessionId = sessionId;
 						break;
 					}
 				}
+
+				// @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
 				this.requestedSessionCached = true;
 			}
 			return this.requestedSession;
@@ -385,10 +424,19 @@ public class SessionRepositoryFilter<S extends Session> extends OncePerRequestFi
 
 			@Override
 			public void invalidate() {
+				// 先标记一下我已经调用过 invalidate 方法
 				super.invalidate();
+
+				// 然后在 RequestWrapper 里面再标记一下
 				SessionRepositoryRequestWrapper.this.requestedSessionInvalidated = true;
+
+				// 删除 Request 存储的属性
 				setCurrentSession(null);
+
+				//
 				clearRequestedSessionCache();
+
+				// 从会话仓库中删除
 				SessionRepositoryFilter.this.sessionRepository.deleteById(getId());
 			}
 

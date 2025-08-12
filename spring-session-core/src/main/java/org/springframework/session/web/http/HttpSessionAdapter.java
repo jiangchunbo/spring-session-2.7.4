@@ -35,6 +35,10 @@ import org.springframework.session.Session;
 
 /**
  * Adapts Spring Session's {@link Session} to an {@link HttpSession}.
+ * <p>
+ * 将 Spring Session 适配为一个 Http Session。Http Session 是一个规范。
+ * <p>
+ * 这个类没有使用 public 修饰，说明它只希望被包内的其他类使用，就是作为其父类
  *
  * @param <S> the {@link Session} type
  * @author Rob Winch
@@ -46,10 +50,16 @@ class HttpSessionAdapter<S extends Session> implements HttpSession {
 
 	private static final Log logger = LogFactory.getLog(HttpSessionAdapter.class);
 
+	/**
+	 * 这个适配层的作用就是把 Spring Session 自己的会话对象存期来，然后使用一种类似代理的方式发挥作用
+	 */
 	private S session;
 
 	private final ServletContext servletContext;
 
+	/**
+	 * 标识是否过期
+	 */
 	private boolean invalidated;
 
 	private boolean old;
@@ -71,85 +81,122 @@ class HttpSessionAdapter<S extends Session> implements HttpSession {
 
 	@Override
 	public long getCreationTime() {
+		// 如果过期了，就抛出异常
 		checkState();
+		// 从 Session 中获取创建时间
 		return this.session.getCreationTime().toEpochMilli();
 	}
 
 	@Override
 	public String getId() {
+		// 从 Session 获取 ID
 		return this.session.getId();
 	}
 
 	@Override
 	public long getLastAccessedTime() {
+		// 如果过期了，就抛出异常
 		checkState();
+		// 从 Session 中获取最后一次访问时间
 		return this.session.getLastAccessedTime().toEpochMilli();
 	}
 
 	@Override
 	public ServletContext getServletContext() {
+		// 返回构造器传入的 ServletContext
 		return this.servletContext;
 	}
 
 	@Override
 	public void setMaxInactiveInterval(int interval) {
+		// 设置最大不活跃间隔
+		// 或者称之为会话超时时间
+		// 单位：秒
+		// 这个值能设置说明它是一个可变量！！！
 		this.session.setMaxInactiveInterval(Duration.ofSeconds(interval));
 	}
 
 	@Override
 	public int getMaxInactiveInterval() {
+		// 获取最大不活跃间隔
 		return (int) this.session.getMaxInactiveInterval().getSeconds();
 	}
 
 	@Override
 	public HttpSessionContext getSessionContext() {
+		// 获取 HttpSessionContext
+		// 是一个 NOOP -> no operation 的操作
 		return NOOP_SESSION_CONTEXT;
 	}
 
 	@Override
 	public Object getAttribute(String name) {
+		// 获取属性
+
+		// 检查状态是否过期
 		checkState();
+		// 从 session 中获取属性
 		return this.session.getAttribute(name);
 	}
 
 	@Override
 	public Object getValue(String name) {
+		// 过时了，使用 getAttribute 替代
 		return getAttribute(name);
 	}
 
 	@Override
 	public Enumeration<String> getAttributeNames() {
+		// 获取所有属性名
+
+		// 检查状态
 		checkState();
+
+		// 直接粗暴获取所有属性名，并包装成一个 Enumeration
 		return Collections.enumeration(this.session.getAttributeNames());
 	}
 
 	@Override
 	public String[] getValueNames() {
+		// 获取所有值的名称
+		// 类似 getValue 都是过时的
+
+		// 检查状态
 		checkState();
+		// 粗暴获取所有属性名，是个 Set，由此可见，属性名是不能重复的
 		Set<String> attrs = this.session.getAttributeNames();
+		// 转换为数组
 		return attrs.toArray(new String[0]);
 	}
 
 	@Override
 	public void setAttribute(String name, Object value) {
+		// 检查状态
 		checkState();
+
+		// 获取旧的值，待会可能要调用它的方法 -> valueUnbound
 		Object oldValue = this.session.getAttribute(name);
+
+		// 设置新的值
 		this.session.setAttribute(name, value);
+
+		// 如果值不相等
 		if (value != oldValue) {
+			// 如果实现了 HttpSessionBindingListener，说明这个[旧值]可以监听自己被取消绑定的事情
 			if (oldValue instanceof HttpSessionBindingListener) {
 				try {
 					((HttpSessionBindingListener) oldValue)
 							.valueUnbound(new HttpSessionBindingEvent(this, name, oldValue));
-				}
-				catch (Throwable th) {
+				} catch (Throwable th) {
 					logger.error("Error invoking session binding event listener", th);
 				}
 			}
+
+			// 如果实现了 HttpSessionBindingListener，说明这个[新值]可以监听自己被绑定到某个会话的事情
 			if (value instanceof HttpSessionBindingListener) {
 				try {
 					((HttpSessionBindingListener) value).valueBound(new HttpSessionBindingEvent(this, name, value));
-				}
-				catch (Throwable th) {
+				} catch (Throwable th) {
 					logger.error("Error invoking session binding event listener", th);
 				}
 			}
@@ -169,8 +216,7 @@ class HttpSessionAdapter<S extends Session> implements HttpSession {
 		if (oldValue instanceof HttpSessionBindingListener) {
 			try {
 				((HttpSessionBindingListener) oldValue).valueUnbound(new HttpSessionBindingEvent(this, name, oldValue));
-			}
-			catch (Throwable th) {
+			} catch (Throwable th) {
 				logger.error("Error invoking session binding event listener", th);
 			}
 		}
@@ -184,6 +230,8 @@ class HttpSessionAdapter<S extends Session> implements HttpSession {
 	@Override
 	public void invalidate() {
 		checkState();
+
+		// 由于这个标记的作用，只能调用一次 invalidate，否则上面 checkState 都会报错
 		this.invalidated = true;
 	}
 
