@@ -28,12 +28,15 @@ public interface SessionRepository<S extends Session> {
 	/**
 	 * Creates a new {@link Session} that is capable of being persisted by this
 	 * {@link SessionRepository}.
+	 * <p>
+	 * 创建 Session
 	 *
 	 * <p>
 	 * This allows optimizations and customizations in how the {@link Session} is
 	 * persisted. For example, the implementation returned might keep track of the changes
 	 * ensuring that only the delta needs to be persisted on a save.
 	 * </p>
+	 *
 	 * @return a new {@link Session} that is capable of being persisted by this
 	 * {@link SessionRepository}
 	 */
@@ -42,12 +45,15 @@ public interface SessionRepository<S extends Session> {
 	/**
 	 * Ensures the {@link Session} created by
 	 * {@link org.springframework.session.SessionRepository#createSession()} is saved.
+	 * <p>
+	 * 保存给定的 Session
 	 *
 	 * <p>
 	 * Some implementations may choose to save as the {@link Session} is updated by
 	 * returning a {@link Session} that immediately persists any changes. In this case,
 	 * this method may not actually do anything.
 	 * </p>
+	 *
 	 * @param session the {@link Session} to save
 	 */
 	void save(S session);
@@ -55,6 +61,9 @@ public interface SessionRepository<S extends Session> {
 	/**
 	 * Gets the {@link Session} by the {@link Session#getId()} or null if no
 	 * {@link Session} is found.
+	 * <p>
+	 * 通过 ID 找到 Session 对象，如果找不到就返回 null
+	 *
 	 * @param id the {@link org.springframework.session.Session#getId()} to lookup
 	 * @return the {@link Session} by the {@link Session#getId()} or null if no
 	 * {@link Session} is found.
@@ -64,6 +73,9 @@ public interface SessionRepository<S extends Session> {
 	/**
 	 * Deletes the {@link Session} with the given {@link Session#getId()} or does nothing
 	 * if the {@link Session} is not found.
+	 * <p>
+	 * 给定 ID 删除指定会话
+	 *
 	 * @param id the {@link org.springframework.session.Session#getId()} to delete
 	 */
 	void deleteById(String id);

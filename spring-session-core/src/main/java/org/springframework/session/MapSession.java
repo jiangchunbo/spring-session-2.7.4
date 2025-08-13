@@ -55,8 +55,14 @@ public final class MapSession implements Session, Serializable {
 
 	private String id;
 
+	/**
+	 * 原始 ID。这是一个 final 值，说明它是一个初始值。
+	 */
 	private final String originalId;
 
+	/**
+	 * 会话属性
+	 */
 	private Map<String, Object> sessionAttrs = new HashMap<>();
 
 	private Instant creationTime = Instant.now();
@@ -72,6 +78,7 @@ public final class MapSession implements Session, Serializable {
 	 * Creates a new instance with a secure randomly generated identifier.
 	 */
 	public MapSession() {
+		// 调用私有方法静态方法 generateId 生成一个 ID
 		this(generateId());
 	}
 
@@ -79,24 +86,35 @@ public final class MapSession implements Session, Serializable {
 	 * Creates a new instance with the specified id. This is preferred to the default
 	 * constructor when the id is known to prevent unnecessary consumption on entropy
 	 * which can be slow.
+	 * <p>
+	 * 给定一个 id 创建实例。对于默认构造器更好，避免向操作系统请求熵，而熵池不足时，JDK 可能会阻塞或变慢。
+	 *
 	 * @param id the identifier to use
 	 */
 	public MapSession(String id) {
+		// 初始状态 id 和 originalId 是相等的
 		this.id = id;
 		this.originalId = id;
 	}
 
 	/**
 	 * Creates a new instance from the provided {@link Session}.
+	 * <p>
+	 * 给定一个 Session 对象。
+	 *
 	 * @param session the {@link Session} to initialize this {@link Session} with. Cannot
-	 * be null.
+	 *                be null.
 	 */
 	public MapSession(Session session) {
 		if (session == null) {
 			throw new IllegalArgumentException("session cannot be null");
 		}
+		// 初始状态 id 和 originalId 是相等的
+		// 后续如果 changeId 只会修改 id
 		this.id = session.getId();
 		this.originalId = this.id;
+
+		// 保存会话属性
 		this.sessionAttrs = new HashMap<>(session.getAttributeNames().size());
 		for (String attrName : session.getAttributeNames()) {
 			Object attrValue = session.getAttribute(attrName);
@@ -104,8 +122,14 @@ public final class MapSession implements Session, Serializable {
 				this.sessionAttrs.put(attrName, attrValue);
 			}
 		}
+
+		// 设置最后一次访问时间
 		this.lastAccessedTime = session.getLastAccessedTime();
+
+		// 设置创建时间
 		this.creationTime = session.getCreationTime();
+
+		// 设置最大不活跃间隔
 		this.maxInactiveInterval = session.getMaxInactiveInterval();
 	}
 
@@ -126,6 +150,7 @@ public final class MapSession implements Session, Serializable {
 
 	/**
 	 * Get the original session id.
+	 *
 	 * @return the original session id
 	 * @see #changeSessionId()
 	 */
@@ -182,8 +207,7 @@ public final class MapSession implements Session, Serializable {
 	public void setAttribute(String attributeName, Object attributeValue) {
 		if (attributeValue == null) {
 			removeAttribute(attributeName);
-		}
-		else {
+		} else {
 			this.sessionAttrs.put(attributeName, attributeValue);
 		}
 	}
@@ -196,6 +220,7 @@ public final class MapSession implements Session, Serializable {
 	/**
 	 * Sets the time that this {@link Session} was created. The default is when the
 	 * {@link Session} was instantiated.
+	 *
 	 * @param creationTime the time that this {@link Session} was created.
 	 */
 	public void setCreationTime(Instant creationTime) {
@@ -206,6 +231,7 @@ public final class MapSession implements Session, Serializable {
 	 * Sets the identifier for this {@link Session}. The id should be a secure random
 	 * generated value to prevent malicious users from guessing this value. The default is
 	 * a secure random generated identifier.
+	 *
 	 * @param id the identifier for this session.
 	 */
 	public void setId(String id) {

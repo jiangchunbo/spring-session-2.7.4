@@ -101,6 +101,9 @@ public class SessionRepositoryFilter<S extends Session> extends OncePerRequestFi
 	 */
 	public static final int DEFAULT_ORDER = Integer.MIN_VALUE + 50;
 
+	/**
+	 * Session 存储库/仓库。存储 Session 的抽象
+	 */
 	private final SessionRepository<S> sessionRepository;
 
 	private HttpSessionIdResolver httpSessionIdResolver = new CookieHttpSessionIdResolver();
@@ -134,16 +137,20 @@ public class SessionRepositoryFilter<S extends Session> extends OncePerRequestFi
 	@Override
 	protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
 			throws ServletException, IOException {
+		// 将 SessionRepository 设置到 request attribute 中
+		// 可能是给后面其他请求处理使用吧，本项目倒是没有看到有什么用
 		request.setAttribute(SESSION_REPOSITORY_ATTR, this.sessionRepository);
 
+		// 包装 Request Response
 		SessionRepositoryRequestWrapper wrappedRequest = new SessionRepositoryRequestWrapper(request, response);
 		SessionRepositoryResponseWrapper wrappedResponse = new SessionRepositoryResponseWrapper(wrappedRequest, response);
 
 		try {
+			// 继续执行 filter chain
 			filterChain.doFilter(wrappedRequest, wrappedResponse);
 		} finally {
-			// 提交会话，也就是每次请求完毕，都会 commit session
-			// 而且，这是一个 finally 逻辑，总是执行
+			// 提交会话
+			// 每次请求执行结束，都会 commit session (finally)
 			wrappedRequest.commitSession();
 		}
 	}
@@ -209,6 +216,9 @@ public class SessionRepositoryFilter<S extends Session> extends OncePerRequestFi
 		 */
 		private String requestedSessionId;
 
+		/**
+		 * 请求会话 ID 是否有效。默认是 null，表示还未设置。
+		 */
 		private Boolean requestedSessionIdValid;
 
 		private boolean requestedSessionInvalidated;
@@ -249,14 +259,16 @@ public class SessionRepositoryFilter<S extends Session> extends OncePerRequestFi
 		}
 
 		/**
-		 * 获取当前会话，
-		 * @return
+		 * 获取当前会话。从 request attribute 中获取
 		 */
 		@SuppressWarnings("unchecked")
 		private HttpSessionWrapper getCurrentSession() {
 			return (HttpSessionWrapper) getAttribute(CURRENT_SESSION_ATTR);
 		}
 
+		/**
+		 * 设置当前会话。这个方法不仅可以设置会话，还有清除会话
+		 */
 		private void setCurrentSession(HttpSessionWrapper currentSession) {
 			if (currentSession == null) {
 				removeAttribute(CURRENT_SESSION_ATTR);
@@ -275,11 +287,21 @@ public class SessionRepositoryFilter<S extends Session> extends OncePerRequestFi
 						"Cannot change session ID. There is no session associated with this request.");
 			}
 
+			// 获取 Spring Session 调用 changeSessionId
 			return getCurrentSession().getSession().changeSessionId();
 		}
 
+		/**
+		 * 请求的会话 ID 是否有效。
+		 * <p>
+		 * 这个方法里面主要还是依靠 requestedSessionIdValid，
+		 * 如果没有设置 requestedSessionIdValid，那么就从 request 中解析再赋值 requestedSessionIdValid，
+		 * 如果设置了 requestedSessionIdValid，那么就直接取~~~
+		 */
 		@Override
 		public boolean isRequestedSessionIdValid() {
+
+			// 如果还没有设置这个标记，那么就需要立即从请求解析 Session ID -> Session
 			if (this.requestedSessionIdValid == null) {
 				S requestedSession = getRequestedSession();
 				if (requestedSession != null) {
@@ -290,6 +312,9 @@ public class SessionRepositoryFilter<S extends Session> extends OncePerRequestFi
 			return this.requestedSessionIdValid;
 		}
 
+		/**
+		 * 判断 session 是否有效
+		 */
 		private boolean isRequestedSessionIdValid(S session) {
 			if (this.requestedSessionIdValid == null) {
 				this.requestedSessionIdValid = session != null;
@@ -303,15 +328,24 @@ public class SessionRepositoryFilter<S extends Session> extends OncePerRequestFi
 
 		@Override
 		public HttpSessionWrapper getSession(boolean create) {
-			//
+			// 获得 current session (从 request attribute)
 			HttpSessionWrapper currentSession = getCurrentSession();
 			if (currentSession != null) {
 				return currentSession;
 			}
+
+			// 从 request 解析 sessionId 并尝试获取 session
+			// 为什么是尝试呢？因为可能获取不到，那么返回 null
 			S requestedSession = getRequestedSession();
+
+
 			if (requestedSession != null) {
 				if (getAttribute(INVALID_SESSION_ID_ATTR) == null) {
+
+					// 设置最后一次访问时间
 					requestedSession.setLastAccessedTime(Instant.now());
+
+					// 记录 session id 有效
 					this.requestedSessionIdValid = true;
 					currentSession = new HttpSessionWrapper(requestedSession, getServletContext());
 					currentSession.markNotNew();
@@ -325,6 +359,8 @@ public class SessionRepositoryFilter<S extends Session> extends OncePerRequestFi
 					SESSION_LOGGER.debug(
 							"No session found by id: Caching result for getSession(false) for this HttpServletRequest.");
 				}
+
+				// 标记一个属性，告诉 session 是无效的
 				setAttribute(INVALID_SESSION_ID_ATTR, "true");
 			}
 			if (!create) {
