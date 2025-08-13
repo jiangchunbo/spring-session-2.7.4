@@ -303,6 +303,7 @@ public class SessionRepositoryFilter<S extends Session> extends OncePerRequestFi
 
 		@Override
 		public HttpSessionWrapper getSession(boolean create) {
+			//
 			HttpSessionWrapper currentSession = getCurrentSession();
 			if (currentSession != null) {
 				return currentSession;
@@ -405,8 +406,11 @@ public class SessionRepositoryFilter<S extends Session> extends OncePerRequestFi
 		}
 
 		private void clearRequestedSessionCache() {
+			// 清空是否缓存过的标记，这使得可以继续获取新的会话
 			this.requestedSessionCached = false;
+			// 清除会话对象
 			this.requestedSession = null;
+			// 清除会话ID
 			this.requestedSessionId = null;
 		}
 
@@ -433,7 +437,7 @@ public class SessionRepositoryFilter<S extends Session> extends OncePerRequestFi
 				// 删除 Request 存储的属性
 				setCurrentSession(null);
 
-				//
+				// 清除 3 个标记
 				clearRequestedSessionCache();
 
 				// 从会话仓库中删除
