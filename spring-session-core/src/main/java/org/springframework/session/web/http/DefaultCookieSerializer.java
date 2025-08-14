@@ -47,6 +47,9 @@ public class DefaultCookieSerializer implements CookieSerializer {
 
 	private static final Log logger = LogFactory.getLog(DefaultCookieSerializer.class);
 
+	/**
+	 * 使用位图来判断 domain (request.getServerName()) 是否合法
+	 */
 	private static final BitSet domainValid = new BitSet(128);
 
 	static {
@@ -87,17 +90,22 @@ public class DefaultCookieSerializer implements CookieSerializer {
 
 	private String sameSite = "Lax";
 
-	/*
-	 * @see org.springframework.session.web.http.CookieSerializer#readCookieValues(javax.
-	 * servlet.http.HttpServletRequest)
+	/**
+	 * 读取 Cookie。其实也就是根据 cookieName，然后再适当解码、截取 session id
+	 *
+	 * @see org.springframework.session.web.http.CookieSerializer#readCookieValues(javax.servlet.http.HttpServletRequest)
 	 */
 	@Override
 	public List<String> readCookieValues(HttpServletRequest request) {
 		Cookie[] cookies = request.getCookies();
+
+		// 获取匹配的 Cookie
 		List<String> matchingCookieValues = new ArrayList<>();
 		if (cookies != null) {
 			for (Cookie cookie : cookies) {
+				// 若名称匹配
 				if (this.cookieName.equals(cookie.getName())) {
+					// 有可能 cookie value 使用了 base64 所以要检查是否要解码
 					String sessionId = (this.useBase64Encoding ? base64Decode(cookie.getValue()) : cookie.getValue());
 					if (sessionId == null) {
 						continue;
@@ -112,21 +120,27 @@ public class DefaultCookieSerializer implements CookieSerializer {
 		return matchingCookieValues;
 	}
 
-	/*
-	 * @see org.springframework.session.web.http.CookieWriter#writeCookieValue(org.
-	 * springframework.session.web.http.CookieWriter.CookieValue)
+	/**
+	 *
+	 *
+	 * @see org.springframework.session.web.http.CookieWriter#writeCookieValue(org.springframework.session.web.http.CookieWriter.CookieValue)
 	 */
 	@Override
 	public void writeCookieValue(CookieValue cookieValue) {
 		HttpServletRequest request = cookieValue.getRequest();
 		HttpServletResponse response = cookieValue.getResponse();
 		StringBuilder sb = new StringBuilder();
+
+		// 拼接 cookieName=<cookieValue>
 		sb.append(this.cookieName).append('=');
 		String value = getValue(cookieValue);
 		if (value != null && value.length() > 0) {
 			validateValue(value);
 			sb.append(value);
 		}
+
+		// 拼接 ; Max-Age=<maxAge>
+		// 拼接 ; Expires=<expires>
 		int maxAge = getMaxAge(cookieValue);
 		if (maxAge > -1) {
 			sb.append("; Max-Age=").append(cookieValue.getCookieMaxAge());
@@ -134,11 +148,15 @@ public class DefaultCookieSerializer implements CookieSerializer {
 					: Instant.EPOCH.atZone(ZoneOffset.UTC);
 			sb.append("; Expires=").append(expires.format(DateTimeFormatter.RFC_1123_DATE_TIME));
 		}
+
+		// 拼接 ; Domain=<domainName>
 		String domain = getDomainName(request);
 		if (domain != null && domain.length() > 0) {
 			validateDomain(domain);
 			sb.append("; Domain=").append(domain);
 		}
+
+		// 拼接 ; Path=<path>
 		String path = getCookiePath(request);
 		if (path != null && path.length() > 0) {
 			validatePath(path);
@@ -158,6 +176,7 @@ public class DefaultCookieSerializer implements CookieSerializer {
 
 	/**
 	 * Decode the value using Base64.
+	 *
 	 * @param base64Value the Base64 String to decode
 	 * @return the Base64 decoded value
 	 * @since 1.2.2
@@ -166,8 +185,7 @@ public class DefaultCookieSerializer implements CookieSerializer {
 		try {
 			byte[] decodedCookieBytes = Base64.getDecoder().decode(base64Value);
 			return new String(decodedCookieBytes);
-		}
-		catch (Exception ex) {
+		} catch (Exception ex) {
 			logger.debug("Unable to Base64 decode value: " + base64Value);
 			return null;
 		}
@@ -175,6 +193,7 @@ public class DefaultCookieSerializer implements CookieSerializer {
 
 	/**
 	 * Encode the value using Base64.
+	 *
 	 * @param value the String to Base64 encode
 	 * @return the Base64 encoded value
 	 * @since 1.2.2
@@ -221,8 +240,7 @@ public class DefaultCookieSerializer implements CookieSerializer {
 				// session expiration rather than cookie expiration if remember me is
 				// enabled
 				cookieValue.setCookieMaxAge(Integer.MAX_VALUE);
-			}
-			else if (this.cookieMaxAge != null) {
+			} else if (this.cookieMaxAge != null) {
 				cookieValue.setCookieMaxAge(this.cookieMaxAge);
 			}
 		}
@@ -263,6 +281,7 @@ public class DefaultCookieSerializer implements CookieSerializer {
 	/**
 	 * Sets if a Cookie marked as secure should be used. The default is to use the value
 	 * of {@link HttpServletRequest#isSecure()}.
+	 *
 	 * @param useSecureCookie determines if the cookie should be marked as secure.
 	 */
 	public void setUseSecureCookie(boolean useSecureCookie) {
@@ -271,6 +290,7 @@ public class DefaultCookieSerializer implements CookieSerializer {
 
 	/**
 	 * Sets if a Cookie marked as HTTP Only should be used. The default is true.
+	 *
 	 * @param useHttpOnlyCookie determines if the cookie should be marked as HTTP Only.
 	 */
 	public void setUseHttpOnlyCookie(boolean useHttpOnlyCookie) {
@@ -287,8 +307,9 @@ public class DefaultCookieSerializer implements CookieSerializer {
 	/**
 	 * Sets the path of the Cookie. The default is to use the context path from the
 	 * {@link HttpServletRequest}.
+	 *
 	 * @param cookiePath the path of the Cookie. If null, the default of the context path
-	 * will be used.
+	 *                   will be used.
 	 */
 	public void setCookiePath(String cookiePath) {
 		this.cookiePath = cookiePath;
@@ -304,6 +325,7 @@ public class DefaultCookieSerializer implements CookieSerializer {
 	/**
 	 * Sets the maxAge property of the Cookie. The default is to delete the cookie when
 	 * the browser is closed.
+	 *
 	 * @param cookieMaxAge the maxAge property of the Cookie (defined in seconds)
 	 */
 	public void setCookieMaxAge(int cookieMaxAge) {
@@ -314,6 +336,7 @@ public class DefaultCookieSerializer implements CookieSerializer {
 	 * Sets an explicit Domain Name. This allow the domain of "example.com" to be used
 	 * when the request comes from www.example.com. This allows for sharing the cookie
 	 * across subdomains. The default is to use the current domain.
+	 *
 	 * @param domainName the name of the domain to use. (i.e. "example.com")
 	 * @throws IllegalStateException if the domainNamePattern is also set
 	 */
@@ -349,8 +372,9 @@ public class DefaultCookieSerializer implements CookieSerializer {
 	 * <li>localhost - null</li>
 	 * <li>127.0.1.1 - null</li>
 	 * </ul>
+	 *
 	 * @param domainNamePattern the case insensitive pattern to extract the domain name
-	 * with
+	 *                          with
 	 * @throws IllegalStateException if the domainName is also set
 	 */
 	public void setDomainNamePattern(String domainNamePattern) {
@@ -367,6 +391,9 @@ public class DefaultCookieSerializer implements CookieSerializer {
 	 * can help with tracing logs of a particular user. This will ensure that the value of
 	 * the cookie is formatted as
 	 * </p>
+	 * <p>
+	 * 在 Session ID 后面加上 . 再加上 JvmRoute
+	 *
 	 * <code>
 	 * sessionId + "." jvmRoute
 	 * </code>
@@ -374,6 +401,7 @@ public class DefaultCookieSerializer implements CookieSerializer {
 	 * To use set a custom route on each JVM instance and setup a frontend proxy to
 	 * forward all requests to the JVM based on the route.
 	 * </p>
+	 *
 	 * @param jvmRoute the JVM Route to use (i.e. "node01jvmA", "n01ja", etc)
 	 */
 	public void setJvmRoute(String jvmRoute) {
@@ -384,6 +412,7 @@ public class DefaultCookieSerializer implements CookieSerializer {
 	 * Set if the Base64 encoding of cookie value should be used. This is valuable in
 	 * order to support <a href="https://tools.ietf.org/html/rfc6265">RFC 6265</a> which
 	 * recommends using Base 64 encoding to the cookie value.
+	 *
 	 * @param useBase64Encoding the flag to indicate whether to use Base64 encoding
 	 */
 	public void setUseBase64Encoding(boolean useBase64Encoding) {
@@ -393,6 +422,7 @@ public class DefaultCookieSerializer implements CookieSerializer {
 	/**
 	 * Set the request attribute name that indicates remember-me login. If specified, the
 	 * cookie will be written as Integer.MAX_VALUE.
+	 *
 	 * @param rememberMeRequestAttribute the remember-me request attribute name
 	 * @since 1.3.0
 	 */
@@ -406,6 +436,7 @@ public class DefaultCookieSerializer implements CookieSerializer {
 	/**
 	 * Set the value for the {@code SameSite} cookie directive. The default value is
 	 * {@code Lax}.
+	 *
 	 * @param sameSite the SameSite directive value
 	 * @since 2.1.0
 	 */

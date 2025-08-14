@@ -23,6 +23,8 @@ import org.springframework.util.Assert;
 
 /**
  * Base class for {@link IndexResolver}s that resolve a single index.
+ * <p>
+ * 用于提取单个索引的基础类。
  *
  * @param <S> the type of Session being handled
  * @author Rob Winch
@@ -45,7 +47,11 @@ public abstract class SingleIndexResolver<S extends Session> implements IndexRes
 	public abstract String resolveIndexValueFor(S session);
 
 	public final Map<String, String> resolveIndexesFor(S session) {
+
+		// 解析一个值，仅仅 1 个 -> 你直接理解就是 getAttribute 就好了
 		String indexValue = resolveIndexValueFor(session);
+
+		// 返回一个 singletonMap 或者是一个 空的 Map
 		return (indexValue != null) ? Collections.singletonMap(this.indexName, indexValue) : Collections.emptyMap();
 	}
 

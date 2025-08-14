@@ -32,8 +32,11 @@ public interface CookieSerializer {
 
 	/**
 	 * Writes a given {@link CookieValue} to the provided {@link HttpServletResponse}.
+	 * <p>
+	 * 给定一个 CookieValue 写入 Response
+	 *
 	 * @param cookieValue the {@link CookieValue} to write to
-	 * {@link CookieValue#getResponse()}. Cannot be null.
+	 *                    {@link CookieValue#getResponse()}. Cannot be null.
 	 */
 	void writeCookieValue(CookieValue cookieValue);
 
@@ -42,8 +45,11 @@ public interface CookieSerializer {
 	 * List since there can be multiple {@link Cookie} in a single request with a matching
 	 * name. For example, one Cookie may have a path of / and another of /context, but the
 	 * path is not transmitted in the request.
+	 * <p>
+	  * 从请求读取所有匹配的 cookie
+	 *
 	 * @param request the {@link HttpServletRequest} to read the cookie from. Cannot be
-	 * null.
+	 *                null.
 	 * @return the values of all the matching cookies
 	 */
 	List<String> readCookieValues(HttpServletRequest request);
@@ -68,12 +74,13 @@ public interface CookieSerializer {
 
 		/**
 		 * Creates a new instance.
-		 * @param request the {@link HttpServletRequest} to use. Useful for determining
-		 * the context in which the cookie is set. Cannot be null.
-		 * @param response the {@link HttpServletResponse} to use.
+		 *
+		 * @param request     the {@link HttpServletRequest} to use. Useful for determining
+		 *                    the context in which the cookie is set. Cannot be null.
+		 * @param response    the {@link HttpServletResponse} to use.
 		 * @param cookieValue the value of the cookie to be written. This value may be
-		 * modified by the {@link CookieSerializer} when writing to the actual cookie so
-		 * long as the original value is returned when the cookie is read.
+		 *                    modified by the {@link CookieSerializer} when writing to the actual cookie so
+		 *                    long as the original value is returned when the cookie is read.
 		 */
 		public CookieValue(HttpServletRequest request, HttpServletResponse response, String cookieValue) {
 			this.request = request;
@@ -86,6 +93,7 @@ public interface CookieSerializer {
 
 		/**
 		 * Gets the request to use.
+		 *
 		 * @return the request to use. Cannot be null.
 		 */
 		public HttpServletRequest getRequest() {
@@ -94,6 +102,7 @@ public interface CookieSerializer {
 
 		/**
 		 * Gets the response to write to.
+		 *
 		 * @return the response to write to. Cannot be null.
 		 */
 		public HttpServletResponse getResponse() {
@@ -104,6 +113,7 @@ public interface CookieSerializer {
 		 * The value to be written. This value may be modified by the
 		 * {@link CookieSerializer} before written to the cookie. However, the value must
 		 * be the same as the original when it is read back in.
+		 *
 		 * @return the value to be written
 		 */
 		public String getCookieValue() {
@@ -113,6 +123,7 @@ public interface CookieSerializer {
 		/**
 		 * Get the cookie max age. The default is -1 which signals to delete the cookie
 		 * when the browser is closed, or 0 if cookie value is empty.
+		 *
 		 * @return the cookie max age
 		 */
 		public int getCookieMaxAge() {
@@ -121,6 +132,7 @@ public interface CookieSerializer {
 
 		/**
 		 * Set the cookie max age.
+		 *
 		 * @param cookieMaxAge the cookie max age
 		 */
 		public void setCookieMaxAge(int cookieMaxAge) {

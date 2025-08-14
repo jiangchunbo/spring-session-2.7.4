@@ -20,17 +20,22 @@ import java.util.Map;
 
 /**
  * Strategy interface for resolving the {@link Session}'s indexes.
+ * <p>
+ * 一个策略接口，用于从 Session 中提取一组索引键值对。默认就是为了找到本次会话的用户名是谁。
  *
  * @param <S> the type of Session being handled
  * @author Rob Winch
  * @author Vedran Pavic
- * @since 2.2.0
  * @see FindByIndexNameSessionRepository
+ * @since 2.2.0
  */
 public interface IndexResolver<S extends Session> {
 
 	/**
 	 * Resolve indexes for the session.
+	 * <p>
+	 * 从 Session 对象中提取一组[索引键值对]
+	 *
 	 * @param session the session
 	 * @return a map of resolved indexes, never {@code null}
 	 */

@@ -66,6 +66,9 @@ public final class CookieHttpSessionIdResolver implements HttpSessionIdResolver 
 	private static final String WRITTEN_SESSION_ID_ATTR = CookieHttpSessionIdResolver.class.getName()
 			.concat(".WRITTEN_SESSION_ID_ATTR");
 
+	/**
+	 * 内置默认的 cookie 序列化器就是默认的序列化器
+	 */
 	private CookieSerializer cookieSerializer = new DefaultCookieSerializer();
 
 	@Override

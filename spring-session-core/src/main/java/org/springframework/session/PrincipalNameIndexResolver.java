@@ -35,14 +35,19 @@ public class PrincipalNameIndexResolver<S extends Session> extends SingleIndexRe
 	private static final Expression expression = new SpelExpressionParser().parseExpression("authentication?.name");
 
 	public PrincipalNameIndexResolver() {
+		// 传入的常量如下
+		// org.springframework.session.FindByIndexNameSessionRepository.PRINCIPAL_NAME_INDEX_NAME
 		super(FindByIndexNameSessionRepository.PRINCIPAL_NAME_INDEX_NAME);
 	}
 
 	public String resolveIndexValueFor(S session) {
+		// 首先，通过自己配置的 indexName 寻找会话属性，如果找到就返回
 		String principalName = session.getAttribute(getIndexName());
 		if (principalName != null) {
 			return principalName;
 		}
+
+		// 其次，使用一个常量 SPRING_SECURITY_CONTEXT 寻找
 		Object authentication = session.getAttribute(SPRING_SECURITY_CONTEXT);
 		if (authentication != null) {
 			return expression.getValue(authentication, String.class);

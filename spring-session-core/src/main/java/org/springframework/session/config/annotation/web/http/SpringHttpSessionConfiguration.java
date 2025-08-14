@@ -100,6 +100,9 @@ public class SpringHttpSessionConfiguration implements ApplicationContextAware {
 	 */
 	private CookieHttpSessionIdResolver defaultHttpSessionIdResolver = new CookieHttpSessionIdResolver();
 
+	/**
+	 * 是否使用 spring session 记住我？
+	 */
 	private boolean usesSpringSessionRememberMeServices;
 
 	private ServletContext servletContext;
@@ -113,6 +116,9 @@ public class SpringHttpSessionConfiguration implements ApplicationContextAware {
 
 	private List<HttpSessionListener> httpSessionListeners = new ArrayList<>();
 
+	/**
+	 * 为什么要在这里加一个这个，会等待 setter @Autowired 完成绑定，为了保证再开发者自己设置 cookieSerializer 之后
+	 */
 	@PostConstruct
 	public void init() {
 		// 此处获取了 cookieSerializer，如果没有拿到，就创建一个默认的
@@ -167,6 +173,8 @@ public class SpringHttpSessionConfiguration implements ApplicationContextAware {
 
 	private CookieSerializer createDefaultCookieSerializer() {
 		DefaultCookieSerializer cookieSerializer = new DefaultCookieSerializer();
+
+		// 如果设置了 servletContext，那么就要从这里面获取 SessionCookieConfig
 		if (this.servletContext != null) {
 			SessionCookieConfig sessionCookieConfig = null;
 			try {

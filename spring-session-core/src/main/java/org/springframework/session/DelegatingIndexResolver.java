@@ -26,6 +26,8 @@ import java.util.Map;
  * An {@link IndexResolver} that resolves indexes using multiple @{link IndexResolver}
  * delegates.
  *
+ *
+ *
  * @param <S> the type of Session being handled
  * @author Vedran Pavic
  * @since 2.2.0
