@@ -87,14 +87,17 @@ import org.springframework.util.ObjectUtils;
  *
  * @author Rob Winch
  * @author Vedran Pavic
- * @since 1.1
  * @see EnableSpringHttpSession
+ * @since 1.1
  */
 @Configuration(proxyBeanMethods = false)
 public class SpringHttpSessionConfiguration implements ApplicationContextAware {
 
 	private final Log logger = LogFactory.getLog(getClass());
 
+	/**
+	 * 使用 Cookie 作为 Session Id 传递的媒介。但是其中 Cookie 的序列化器是可以重新设置的。
+	 */
 	private CookieHttpSessionIdResolver defaultHttpSessionIdResolver = new CookieHttpSessionIdResolver();
 
 	private boolean usesSpringSessionRememberMeServices;
@@ -103,12 +106,16 @@ public class SpringHttpSessionConfiguration implements ApplicationContextAware {
 
 	private CookieSerializer cookieSerializer;
 
+	/**
+	 * 使用默认
+	 */
 	private HttpSessionIdResolver httpSessionIdResolver = this.defaultHttpSessionIdResolver;
 
 	private List<HttpSessionListener> httpSessionListeners = new ArrayList<>();
 
 	@PostConstruct
 	public void init() {
+		// 此处获取了 cookieSerializer，如果没有拿到，就创建一个默认的
 		CookieSerializer cookieSerializer = (this.cookieSerializer != null) ? this.cookieSerializer
 				: createDefaultCookieSerializer();
 		this.defaultHttpSessionIdResolver.setCookieSerializer(cookieSerializer);
@@ -119,6 +126,9 @@ public class SpringHttpSessionConfiguration implements ApplicationContextAware {
 		return new SessionEventHttpSessionListenerAdapter(this.httpSessionListeners);
 	}
 
+	/**
+	 * 创建一个 Filter，这个 Filter 用于接管 HttpSession 的生命周期
+	 */
 	@Bean
 	public <S extends Session> SessionRepositoryFilter<? extends Session> springSessionRepositoryFilter(
 			SessionRepository<S> sessionRepository) {
@@ -161,8 +171,7 @@ public class SpringHttpSessionConfiguration implements ApplicationContextAware {
 			SessionCookieConfig sessionCookieConfig = null;
 			try {
 				sessionCookieConfig = this.servletContext.getSessionCookieConfig();
-			}
-			catch (UnsupportedOperationException ex) {
+			} catch (UnsupportedOperationException ex) {
 				this.logger.warn("Unable to obtain SessionCookieConfig: " + ex.getMessage());
 			}
 			if (sessionCookieConfig != null) {

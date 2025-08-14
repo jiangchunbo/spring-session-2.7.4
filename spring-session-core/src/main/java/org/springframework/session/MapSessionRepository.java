@@ -27,6 +27,8 @@ import org.springframework.session.events.SessionExpiredEvent;
  * {@link MapSession}. The injected {@link java.util.Map} can be backed by a distributed
  * NoSQL store like Hazelcast, for instance. Note that the supplied map itself is
  * responsible for purging the expired sessions.
+ * <p>
+ * 这是一个以 Map 作为存储的 SessionRepository，并且使用 MapSession。
  *
  * <p>
  * The implementation does NOT support firing {@link SessionDeletedEvent} or
@@ -49,6 +51,7 @@ public class MapSessionRepository implements SessionRepository<MapSession> {
 	/**
 	 * Creates a new instance backed by the provided {@link java.util.Map}. This allows
 	 * injecting a distributed {@link java.util.Map}.
+	 *
 	 * @param sessions the {@link java.util.Map} to use. Cannot be null.
 	 */
 	public MapSessionRepository(Map<String, Session> sessions) {
@@ -61,8 +64,9 @@ public class MapSessionRepository implements SessionRepository<MapSession> {
 	/**
 	 * If non-null, this value is used to override
 	 * {@link Session#setMaxInactiveInterval(Duration)}.
+	 *
 	 * @param defaultMaxInactiveInterval the number of seconds that the {@link Session}
-	 * should be kept alive between client requests.
+	 *                                   should be kept alive between client requests.
 	 */
 	public void setDefaultMaxInactiveInterval(int defaultMaxInactiveInterval) {
 		this.defaultMaxInactiveInterval = defaultMaxInactiveInterval;
@@ -70,7 +74,9 @@ public class MapSessionRepository implements SessionRepository<MapSession> {
 
 	@Override
 	public void save(MapSession session) {
+		// 如果 session 当前的 id 与初始 id 不相等
 		if (!session.getId().equals(session.getOriginalId())) {
+			// 删除
 			this.sessions.remove(session.getOriginalId());
 		}
 		this.sessions.put(session.getId(), new MapSession(session));
