@@ -32,6 +32,11 @@ import javax.servlet.http.HttpServletResponse;
  * Allows for easily ensuring that a request is only invoked once per request. This is a
  * simplified version of spring-web's OncePerRequestFilter and copied to reduce the foot
  * print required to use the session support.
+ * <p>
+ * 该类能够方便地保证某个过滤器在一次 HTTP 请求中只执行一次。
+ * <p>
+ * 这是 spring-web 模块中 OncePerRequestFilter 的精简版本，
+ * 被复制到这里是为了在提供 Session 支持时减小依赖包的体积。
  *
  * @author Rob Winch
  * @since 1.0
@@ -49,11 +54,12 @@ abstract class OncePerRequestFilter implements Filter {
 	/**
 	 * This {@code doFilter} implementation stores a request attribute for "already
 	 * filtered", proceeding without filtering again if the attribute is already there.
-	 * @param request the request
-	 * @param response the response
+	 *
+	 * @param request     the request
+	 * @param response    the response
 	 * @param filterChain the filter chain
 	 * @throws ServletException if request is not HTTP request
-	 * @throws IOException in case of I/O operation exception
+	 * @throws IOException      in case of I/O operation exception
 	 */
 	@Override
 	public final void doFilter(ServletRequest request, ServletResponse response, FilterChain filterChain)
@@ -64,6 +70,8 @@ abstract class OncePerRequestFilter implements Filter {
 		}
 		HttpServletRequest httpRequest = (HttpServletRequest) request;
 		HttpServletResponse httpResponse = (HttpServletResponse) response;
+
+		// 获得一个标记字符串
 		String alreadyFilteredAttributeName = getAlreadyFilteredAttributeName();
 		boolean hasAlreadyFilteredAttribute = request.getAttribute(alreadyFilteredAttributeName) != null;
 
@@ -74,14 +82,12 @@ abstract class OncePerRequestFilter implements Filter {
 			}
 			// Proceed without invoking this filter...
 			filterChain.doFilter(request, response);
-		}
-		else {
+		} else {
 			// Do invoke this filter...
 			request.setAttribute(alreadyFilteredAttributeName, Boolean.TRUE);
 			try {
 				doFilterInternal(httpRequest, httpResponse, filterChain);
-			}
-			finally {
+			} finally {
 				// Remove the "already filtered" request attribute for this request.
 				request.removeAttribute(alreadyFilteredAttributeName);
 			}
@@ -95,6 +101,7 @@ abstract class OncePerRequestFilter implements Filter {
 	 * The default implementation takes the configured name of the concrete filter
 	 * instance and appends ".FILTERED". If the filter is not fully initialized, it falls
 	 * back to its class name.
+	 *
 	 * @return the name of request attribute indicating already filtered request
 	 * @see #ALREADY_FILTERED_SUFFIX
 	 */
@@ -112,14 +119,15 @@ abstract class OncePerRequestFilter implements Filter {
 	 * Sub-classes may use this method to filter such nested ERROR dispatches and re-apply
 	 * wrapping on the request or response. {@code ThreadLocal} context, if any, should
 	 * still be active as we are still nested within the filter chain.
-	 * @param request the request
-	 * @param response the response
+	 *
+	 * @param request     the request
+	 * @param response    the response
 	 * @param filterChain the filter chain
 	 * @throws ServletException if request is not HTTP request
-	 * @throws IOException in case of I/O operation exception
+	 * @throws IOException      in case of I/O operation exception
 	 */
 	protected void doFilterNestedErrorDispatch(HttpServletRequest request, HttpServletResponse response,
-			FilterChain filterChain) throws ServletException, IOException {
+											   FilterChain filterChain) throws ServletException, IOException {
 		doFilter(request, response, filterChain);
 	}
 
@@ -129,15 +137,16 @@ abstract class OncePerRequestFilter implements Filter {
 	 * <p>
 	 * Provides HttpServletRequest and HttpServletResponse arguments instead of the
 	 * default ServletRequest and ServletResponse ones.
-	 * @param request the request
-	 * @param response the response
+	 *
+	 * @param request     the request
+	 * @param response    the response
 	 * @param filterChain the FilterChain
 	 * @throws ServletException thrown when a non-I/O exception has occurred
-	 * @throws IOException thrown when an I/O exception of some sort has occurred
+	 * @throws IOException      thrown when an I/O exception of some sort has occurred
 	 * @see Filter#doFilter
 	 */
 	protected abstract void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
-			FilterChain filterChain) throws ServletException, IOException;
+											 FilterChain filterChain) throws ServletException, IOException;
 
 	@Override
 	public void init(FilterConfig config) {
