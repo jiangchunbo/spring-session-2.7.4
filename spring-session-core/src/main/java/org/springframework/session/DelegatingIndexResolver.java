@@ -25,8 +25,8 @@ import java.util.Map;
 /**
  * An {@link IndexResolver} that resolves indexes using multiple @{link IndexResolver}
  * delegates.
- *
- *
+ * <p>
+ * 使用多个 IndexResolver 委托，全都解析一遍，然后汇总结果
  *
  * @param <S> the type of Session being handled
  * @author Vedran Pavic
@@ -45,6 +45,7 @@ public class DelegatingIndexResolver<S extends Session> implements IndexResolver
 		this(Arrays.asList(delegates));
 	}
 
+	@Override
 	public Map<String, String> resolveIndexesFor(S session) {
 		Map<String, String> indexes = new HashMap<>();
 		for (IndexResolver<S> delegate : this.delegates) {

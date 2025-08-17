@@ -211,6 +211,9 @@ public class RedisHttpSessionConfiguration extends SpringHttpSessionConfiguratio
 		this.redisConnectionFactory = redisConnectionFactoryToUse;
 	}
 
+	/**
+	 * 自定义序列化器
+	 */
 	@Autowired(required = false)
 	@Qualifier("springSessionDefaultRedisSerializer")
 	public void setDefaultRedisSerializer(RedisSerializer<Object> defaultRedisSerializer) {

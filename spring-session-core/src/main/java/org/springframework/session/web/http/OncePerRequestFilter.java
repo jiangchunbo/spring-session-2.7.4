@@ -33,7 +33,7 @@ import javax.servlet.http.HttpServletResponse;
  * simplified version of spring-web's OncePerRequestFilter and copied to reduce the foot
  * print required to use the session support.
  * <p>
- * 该类能够方便地保证某个过滤器在一次 HTTP 请求中只执行一次。
+ * 保证某个过滤器在一次 HTTP 请求中只执行一次。
  * <p>
  * 这是 spring-web 模块中 OncePerRequestFilter 的精简版本，
  * 被复制到这里是为了在提供 Session 支持时减小依赖包的体积。
@@ -73,6 +73,8 @@ abstract class OncePerRequestFilter implements Filter {
 
 		// 获得一个标记字符串
 		String alreadyFilteredAttributeName = getAlreadyFilteredAttributeName();
+
+		// 检查是否已经存在这个属性标记，如果存在，那么表示已经过滤过
 		boolean hasAlreadyFilteredAttribute = request.getAttribute(alreadyFilteredAttributeName) != null;
 
 		if (hasAlreadyFilteredAttribute) {
@@ -80,15 +82,20 @@ abstract class OncePerRequestFilter implements Filter {
 				doFilterNestedErrorDispatch(httpRequest, httpResponse, filterChain);
 				return;
 			}
+
 			// Proceed without invoking this filter...
+			// 继续执行过滤器链
 			filterChain.doFilter(request, response);
 		} else {
 			// Do invoke this filter...
+			// 添加标记
 			request.setAttribute(alreadyFilteredAttributeName, Boolean.TRUE);
 			try {
+				// 执行内部逻辑
 				doFilterInternal(httpRequest, httpResponse, filterChain);
 			} finally {
 				// Remove the "already filtered" request attribute for this request.
+				// 删除标记
 				request.removeAttribute(alreadyFilteredAttributeName);
 			}
 		}

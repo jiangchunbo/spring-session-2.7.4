@@ -21,9 +21,11 @@ import java.util.Map;
 /**
  * Extends a basic {@link SessionRepository} to allow finding sessions by the specified
  * index name and index value.
+ * <p>
+ * 这是对 SessionRepository 进一层的强化，能够通过特定的 index name 和 index value 找到 session
  *
  * @param <S> the type of Session being managed by this
- * {@link FindByIndexNameSessionRepository}
+ *            {@link FindByIndexNameSessionRepository}
  * @author Rob Winch
  * @author Vedran Pavic
  */
@@ -43,8 +45,15 @@ public interface FindByIndexNameSessionRepository<S extends Session> extends Ses
 	/**
 	 * Find a {@link Map} of the session id to the {@link Session} of all sessions that
 	 * contain the specified index name index value.
-	 * @param indexName the name of the index (i.e.
-	 * {@link FindByIndexNameSessionRepository#PRINCIPAL_NAME_INDEX_NAME})
+	 * <p>
+	 * 获取一个 Map，其中 Key 是 Session ID，Value 是 Session 对象；
+	 * <p>
+	 * 这个 Map 中只包含满足“给定索引名称-索引值”条件的所有会话
+	 * <p>
+	 * 你就理解为 SQL -> select * from sessions where indexName = indexValue
+	 *
+	 * @param indexName  the name of the index (i.e.
+	 *                   {@link FindByIndexNameSessionRepository#PRINCIPAL_NAME_INDEX_NAME})
 	 * @param indexValue the value of the index to search for.
 	 * @return a {@code Map} (never {@code null}) of the session id to the {@code Session}
 	 * of all sessions that contain the specified index name and index value. If no
@@ -57,6 +66,11 @@ public interface FindByIndexNameSessionRepository<S extends Session> extends Ses
 	 * contain the index with the name
 	 * {@link FindByIndexNameSessionRepository#PRINCIPAL_NAME_INDEX_NAME} and the
 	 * specified principal name.
+	 * <p>
+	 * 找到所有的会话 Map，其中属性 principal name 匹配传入的值
+	 * <p>
+	 * 其实 principal name 就是用户名
+	 *
 	 * @param principalName the principal name
 	 * @return a {@code Map} (never {@code null}) of the session id to the {@code Session}
 	 * of all sessions that contain the specified principal name. If no results are found,

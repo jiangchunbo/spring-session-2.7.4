@@ -78,9 +78,14 @@ public final class CookieHttpSessionIdResolver implements HttpSessionIdResolver 
 
 	@Override
 	public void setSessionId(HttpServletRequest request, HttpServletResponse response, String sessionId) {
+		// 使用 request attribute 作为标记
+		// 如果已经存在即将向浏览器写入的 session id，并且与给定的相等，那么就不重复处理了
 		if (sessionId.equals(request.getAttribute(WRITTEN_SESSION_ID_ATTR))) {
 			return;
 		}
+
+		// 否则
+		// 增加标记，写入 cookie 中
 		request.setAttribute(WRITTEN_SESSION_ID_ATTR, sessionId);
 		this.cookieSerializer.writeCookieValue(new CookieValue(request, response, sessionId));
 	}

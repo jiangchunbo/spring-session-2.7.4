@@ -60,6 +60,8 @@ import javax.servlet.http.HttpServletResponse;
  */
 public class HeaderHttpSessionIdResolver implements HttpSessionIdResolver {
 
+	// 这是一种使用
+
 	private static final String HEADER_X_AUTH_TOKEN = "X-Auth-Token";
 
 	private static final String HEADER_AUTHENTICATION_INFO = "Authentication-Info";

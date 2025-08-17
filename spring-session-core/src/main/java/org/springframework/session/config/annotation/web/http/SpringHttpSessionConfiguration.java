@@ -161,6 +161,9 @@ public class SpringHttpSessionConfiguration implements ApplicationContextAware {
 		this.cookieSerializer = cookieSerializer;
 	}
 
+	/**
+	 * 这是一个自动装配的方法，能够寻找 HttpSessionIdResolver 并注入进来
+	 */
 	@Autowired(required = false)
 	public void setHttpSessionIdResolver(HttpSessionIdResolver httpSessionIdResolver) {
 		this.httpSessionIdResolver = httpSessionIdResolver;
