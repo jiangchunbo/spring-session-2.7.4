@@ -132,8 +132,13 @@ public class SpringHttpSessionConfiguration implements ApplicationContextAware {
 		return new SessionEventHttpSessionListenerAdapter(this.httpSessionListeners);
 	}
 
+
 	/**
 	 * 创建一个 Filter，这个 Filter 用于接管 HttpSession 的生命周期
+	 *
+	 * @param sessionRepository 自动装配的 Session 仓库，开发者在 Spring Session 的时候必须显示注入
+	 * @param <S>               Spring Session
+	 * @return 注册 SessionRepositoryFilter
 	 */
 	@Bean
 	public <S extends Session> SessionRepositoryFilter<? extends Session> springSessionRepositoryFilter(

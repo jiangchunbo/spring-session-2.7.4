@@ -64,7 +64,7 @@ import org.springframework.util.StringUtils;
  * </p>
  *
  * <h2>Creating a new instance</h2>
- *
+ * <p>
  * A typical example of how to create a new instance can be seen below:
  *
  * <pre>
@@ -83,7 +83,7 @@ import org.springframework.util.StringUtils;
  * </p>
  *
  * <h2>Storage Details</h2>
- *
+ * <p>
  * The sections below outline how Redis is updated for each operation. An example of
  * creating a new session can be found below. The subsequent sections describe the
  * details.
@@ -302,18 +302,32 @@ public class RedisIndexedSessionRepository
 	 */
 	private Integer defaultMaxInactiveInterval;
 
+	/**
+	 * 默认使用 PrincipalNameIndexResolver。这意味着，你可以从 Session 中获取 Principal
+	 */
 	private IndexResolver<Session> indexResolver = new DelegatingIndexResolver<>(new PrincipalNameIndexResolver<>());
 
+	/**
+	 * 默认的序列化器
+	 */
 	private RedisSerializer<Object> defaultSerializer = new JdkSerializationRedisSerializer();
 
+	/**
+	 * 刷数据模式
+	 */
 	private FlushMode flushMode = FlushMode.ON_SAVE;
 
+	/**
+	 * 保存模式
+	 */
 	private SaveMode saveMode = SaveMode.ON_SET_ATTRIBUTE;
 
 	/**
 	 * Creates a new instance. For an example, refer to the class level javadoc.
+	 *
 	 * @param sessionRedisOperations the {@link RedisOperations} to use for managing the
-	 * sessions. Cannot be null.
+	 *                               sessions. Cannot be null.
+	 *                               其实你理解为 RedisTemplate 就行
 	 */
 	public RedisIndexedSessionRepository(RedisOperations<Object, Object> sessionRedisOperations) {
 		Assert.notNull(sessionRedisOperations, "sessionRedisOperations cannot be null");
@@ -327,8 +341,9 @@ public class RedisIndexedSessionRepository
 	 * Sets the {@link ApplicationEventPublisher} that is used to publish
 	 * {@link SessionDestroyedEvent}. The default is to not publish a
 	 * {@link SessionDestroyedEvent}.
+	 *
 	 * @param applicationEventPublisher the {@link ApplicationEventPublisher} that is used
-	 * to publish {@link SessionDestroyedEvent}. Cannot be null.
+	 *                                  to publish {@link SessionDestroyedEvent}. Cannot be null.
 	 */
 	public void setApplicationEventPublisher(ApplicationEventPublisher applicationEventPublisher) {
 		Assert.notNull(applicationEventPublisher, "applicationEventPublisher cannot be null");
@@ -339,8 +354,9 @@ public class RedisIndexedSessionRepository
 	 * Sets the maximum inactive interval in seconds between requests before newly created
 	 * sessions will be invalidated. A negative time indicates that the session will never
 	 * timeout. The default is 1800 (30 minutes).
+	 *
 	 * @param defaultMaxInactiveInterval the number of seconds that the {@link Session}
-	 * should be kept alive between client requests.
+	 *                                   should be kept alive between client requests.
 	 */
 	public void setDefaultMaxInactiveInterval(int defaultMaxInactiveInterval) {
 		this.defaultMaxInactiveInterval = defaultMaxInactiveInterval;
@@ -348,6 +364,7 @@ public class RedisIndexedSessionRepository
 
 	/**
 	 * Set the {@link IndexResolver} to use.
+	 *
 	 * @param indexResolver the index resolver
 	 */
 	public void setIndexResolver(IndexResolver<Session> indexResolver) {
@@ -358,6 +375,7 @@ public class RedisIndexedSessionRepository
 	/**
 	 * Sets the default redis serializer. Replaces default serializer which is based on
 	 * {@link JdkSerializationRedisSerializer}.
+	 *
 	 * @param defaultSerializer the new default redis serializer
 	 */
 	public void setDefaultSerializer(RedisSerializer<Object> defaultSerializer) {
@@ -367,6 +385,7 @@ public class RedisIndexedSessionRepository
 
 	/**
 	 * Sets the redis flush mode. Default flush mode is {@link FlushMode#ON_SAVE}.
+	 *
 	 * @param flushMode the flush mode
 	 */
 	public void setFlushMode(FlushMode flushMode) {
@@ -376,6 +395,7 @@ public class RedisIndexedSessionRepository
 
 	/**
 	 * Set the save mode.
+	 *
 	 * @param saveMode the save mode
 	 */
 	public void setSaveMode(SaveMode saveMode) {
@@ -385,6 +405,7 @@ public class RedisIndexedSessionRepository
 
 	/**
 	 * Sets the database index to use. Defaults to {@link #DEFAULT_DATABASE}.
+	 *
 	 * @param database the database index to use
 	 */
 	public void setDatabase(int database) {
@@ -405,6 +426,7 @@ public class RedisIndexedSessionRepository
 
 	/**
 	 * Returns the {@link RedisOperations} used for sessions.
+	 *
 	 * @return the {@link RedisOperations} used for sessions
 	 */
 	public RedisOperations<Object, Object> getSessionRedisOperations() {
@@ -449,9 +471,10 @@ public class RedisIndexedSessionRepository
 
 	/**
 	 * Gets the session.
-	 * @param id the session id
+	 *
+	 * @param id           the session id
 	 * @param allowExpired if true, will also include expired sessions that have not been
-	 * deleted. If false, will ensure expired sessions are not returned.
+	 *                     deleted. If false, will ensure expired sessions are not returned.
 	 * @return the Redis session
 	 */
 	private RedisSession getSession(String id, boolean allowExpired) {
@@ -474,14 +497,11 @@ public class RedisIndexedSessionRepository
 			String key = (String) entry.getKey();
 			if (RedisSessionMapper.CREATION_TIME_KEY.equals(key)) {
 				loaded.setCreationTime(Instant.ofEpochMilli((long) entry.getValue()));
-			}
-			else if (RedisSessionMapper.MAX_INACTIVE_INTERVAL_KEY.equals(key)) {
+			} else if (RedisSessionMapper.MAX_INACTIVE_INTERVAL_KEY.equals(key)) {
 				loaded.setMaxInactiveInterval(Duration.ofSeconds((int) entry.getValue()));
-			}
-			else if (RedisSessionMapper.LAST_ACCESSED_TIME_KEY.equals(key)) {
+			} else if (RedisSessionMapper.LAST_ACCESSED_TIME_KEY.equals(key)) {
 				loaded.setLastAccessedTime(Instant.ofEpochMilli((long) entry.getValue()));
-			}
-			else if (key.startsWith(RedisSessionMapper.ATTRIBUTE_PREFIX)) {
+			} else if (key.startsWith(RedisSessionMapper.ATTRIBUTE_PREFIX)) {
 				loaded.setAttribute(key.substring(RedisSessionMapper.ATTRIBUTE_PREFIX.length()), entry.getValue());
 			}
 		}
@@ -556,8 +576,7 @@ public class RedisIndexedSessionRepository
 
 			if (isDeleted) {
 				handleDeleted(session);
-			}
-			else {
+			} else {
 				handleExpired(session);
 			}
 		}
@@ -589,8 +608,7 @@ public class RedisIndexedSessionRepository
 	private void publishEvent(ApplicationEvent event) {
 		try {
 			this.eventPublisher.publishEvent(event);
-		}
-		catch (Throwable ex) {
+		} catch (Throwable ex) {
 			logger.error("Error publishing " + event + ".", ex);
 		}
 	}
@@ -603,6 +621,7 @@ public class RedisIndexedSessionRepository
 
 	/**
 	 * Gets the Hash key for this session by prefixing it appropriately.
+	 *
 	 * @param sessionId the session id
 	 * @return the Hash key for this session by prefixing it appropriately.
 	 */
@@ -634,6 +653,7 @@ public class RedisIndexedSessionRepository
 	/**
 	 * Gets the prefix for the channel that {@link SessionCreatedEvent}s are published to.
 	 * The suffix is the session id of the session that was created.
+	 *
 	 * @return the prefix for the channel that {@link SessionCreatedEvent}s are published
 	 * to
 	 */
@@ -643,6 +663,7 @@ public class RedisIndexedSessionRepository
 
 	/**
 	 * Gets the name of the channel that {@link SessionDeletedEvent}s are published to.
+	 *
 	 * @return the name for the channel that {@link SessionDeletedEvent}s are published to
 	 */
 	public String getSessionDeletedChannel() {
@@ -651,6 +672,7 @@ public class RedisIndexedSessionRepository
 
 	/**
 	 * Gets the name of the channel that {@link SessionExpiredEvent}s are published to.
+	 *
 	 * @return the name for the channel that {@link SessionExpiredEvent}s are published to
 	 */
 	public String getSessionExpiredChannel() {
@@ -659,6 +681,7 @@ public class RedisIndexedSessionRepository
 
 	/**
 	 * Gets the {@link BoundHashOperations} to operate on a {@link Session}.
+	 *
 	 * @param sessionId the id of the {@link Session} to work with
 	 * @return the {@link BoundHashOperations} to operate on a {@link Session}
 	 */
@@ -669,6 +692,7 @@ public class RedisIndexedSessionRepository
 
 	/**
 	 * Gets the key for the specified session attribute.
+	 *
 	 * @param attributeName the attribute name
 	 * @return the attribute key name
 	 */
@@ -847,16 +871,14 @@ public class RedisIndexedSessionRepository
 				try {
 					RedisIndexedSessionRepository.this.sessionRedisOperations.rename(originalSessionIdKey,
 							sessionIdKey);
-				}
-				catch (NonTransientDataAccessException ex) {
+				} catch (NonTransientDataAccessException ex) {
 					handleErrNoSuchKeyError(ex);
 				}
 				String originalExpiredKey = getExpiredKey(this.originalSessionId);
 				String expiredKey = getExpiredKey(sessionId);
 				try {
 					RedisIndexedSessionRepository.this.sessionRedisOperations.rename(originalExpiredKey, expiredKey);
-				}
-				catch (NonTransientDataAccessException ex) {
+				} catch (NonTransientDataAccessException ex) {
 					handleErrNoSuchKeyError(ex);
 				}
 				if (this.originalPrincipalName != null) {

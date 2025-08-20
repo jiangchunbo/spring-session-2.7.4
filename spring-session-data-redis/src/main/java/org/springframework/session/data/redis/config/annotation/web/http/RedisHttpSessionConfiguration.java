@@ -115,9 +115,15 @@ public class RedisHttpSessionConfiguration extends SpringHttpSessionConfiguratio
 
 	private StringValueResolver embeddedValueResolver;
 
+	/**
+	 * 创建一个基于 Redis 的 Session 仓库
+	 */
 	@Bean
 	public RedisIndexedSessionRepository sessionRepository() {
+		// 创建 RedisTemplate，用于操作 Redis
 		RedisTemplate<Object, Object> redisTemplate = createRedisTemplate();
+
+		// 将 RedisTemplate 传给 Session 仓库
 		RedisIndexedSessionRepository sessionRepository = new RedisIndexedSessionRepository(redisTemplate);
 		sessionRepository.setApplicationEventPublisher(this.applicationEventPublisher);
 		if (this.indexResolver != null) {
@@ -142,11 +148,18 @@ public class RedisHttpSessionConfiguration extends SpringHttpSessionConfiguratio
 	@Bean
 	public RedisMessageListenerContainer springSessionRedisMessageListenerContainer(
 			RedisIndexedSessionRepository sessionRepository) {
+		// 创建一个 Redis 消息监听器容器
 		RedisMessageListenerContainer container = new RedisMessageListenerContainer();
+
+		// 设置 Redis 连接工厂
 		container.setConnectionFactory(this.redisConnectionFactory);
+
+		// TODO 与异步有关？
 		if (this.redisTaskExecutor != null) {
 			container.setTaskExecutor(this.redisTaskExecutor);
 		}
+
+		// 订阅执行器
 		if (this.redisSubscriptionExecutor != null) {
 			container.setSubscriptionExecutor(this.redisSubscriptionExecutor);
 		}

@@ -73,7 +73,7 @@ import org.springframework.session.events.SessionDestroyedEvent;
 @Retention(java.lang.annotation.RetentionPolicy.RUNTIME)
 @Target({ java.lang.annotation.ElementType.TYPE })
 @Documented
-@Import(SpringHttpSessionConfiguration.class)
+@Import(SpringHttpSessionConfiguration.class) // 注册 SpringHttpSessionConfiguration 配置类
 @Configuration(proxyBeanMethods = false)
 public @interface EnableSpringHttpSession {
 

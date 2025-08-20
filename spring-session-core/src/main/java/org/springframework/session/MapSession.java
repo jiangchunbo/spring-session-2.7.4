@@ -53,6 +53,9 @@ public final class MapSession implements Session, Serializable {
 	 */
 	public static final int DEFAULT_MAX_INACTIVE_INTERVAL_SECONDS = 1800;
 
+	/**
+	 * 会话 ID
+	 */
 	private String id;
 
 	/**
@@ -65,11 +68,21 @@ public final class MapSession implements Session, Serializable {
 	 */
 	private Map<String, Object> sessionAttrs = new HashMap<>();
 
+	/**
+	 * 创建时间。创建 MapSession 的时候就会自动赋予。
+	 */
 	private Instant creationTime = Instant.now();
 
+	/**
+	 * 最后一次访问时间。创建 MapSession，creationTime 完成了赋值，就会将值赋给 lastAccessedTime
+	 * <p>
+	 * 更类似地，你可以类比 create_time update_time
+	 */
 	private Instant lastAccessedTime = this.creationTime;
 
 	/**
+	 * 最大不活跃间隔。
+	 * <p>
 	 * Defaults to 30 minutes.
 	 */
 	private Duration maxInactiveInterval = Duration.ofSeconds(DEFAULT_MAX_INACTIVE_INTERVAL_SECONDS);
@@ -100,7 +113,7 @@ public final class MapSession implements Session, Serializable {
 	/**
 	 * Creates a new instance from the provided {@link Session}.
 	 * <p>
-	 * 给定一个 Session 对象。
+	 * 类似于拷贝构造器。从另一个 Session 拷贝出 MapSession
 	 *
 	 * @param session the {@link Session} to initialize this {@link Session} with. Cannot
 	 *                be null.

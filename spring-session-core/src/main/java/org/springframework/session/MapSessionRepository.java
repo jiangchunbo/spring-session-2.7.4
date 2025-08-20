@@ -100,6 +100,9 @@ public class MapSessionRepository implements SessionRepository<MapSession> {
 		this.sessions.remove(id);
 	}
 
+	/**
+	 * 创建会话对象
+	 */
 	@Override
 	public MapSession createSession() {
 		MapSession result = new MapSession();

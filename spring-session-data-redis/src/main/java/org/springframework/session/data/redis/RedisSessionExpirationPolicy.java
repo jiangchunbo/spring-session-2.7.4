@@ -32,13 +32,13 @@ import org.springframework.session.data.redis.RedisIndexedSessionRepository.Redi
 
 /**
  * A strategy for expiring {@link RedisSession} instances. This performs two operations:
- *
+ * <p>
  * Redis has no guarantees of when an expired session event will be fired. In order to
  * ensure expired session events are processed in a timely fashion the expiration (rounded
  * to the nearest minute) is mapped to all the sessions that expire at that time. Whenever
  * {@link #cleanExpiredSessions()} is invoked, the sessions for the previous minute are
  * then accessed to ensure they are deleted if expired.
- *
+ * <p>
  * In some instances the {@link #cleanExpiredSessions()} method may not be not invoked for
  * a specific time. For example, this may happen when a server is restarted. To account
  * for this, the expiration on the Redis session is also set.
@@ -58,8 +58,14 @@ final class RedisSessionExpirationPolicy {
 
 	private final Function<String, String> lookupSessionKey;
 
+	/**
+	 *
+	 * @param sessionRedisOperations 简单理解为拿到这个对象就可以操作 redis
+	 * @param lookupExpirationKey    寻找过期的 key
+	 * @param lookupSessionKey       寻找 session key
+	 */
 	RedisSessionExpirationPolicy(RedisOperations<Object, Object> sessionRedisOperations,
-			Function<Long, String> lookupExpirationKey, Function<String, String> lookupSessionKey) {
+								 Function<Long, String> lookupExpirationKey, Function<String, String> lookupSessionKey) {
 		super();
 		this.redis = sessionRedisOperations;
 		this.lookupExpirationKey = lookupExpirationKey;
@@ -104,8 +110,7 @@ final class RedisSessionExpirationPolicy {
 		expireOperations.expire(fiveMinutesAfterExpires, TimeUnit.SECONDS);
 		if (sessionExpireInSeconds == 0) {
 			this.redis.delete(sessionKey);
-		}
-		else {
+		} else {
 			this.redis.boundValueOps(sessionKey).append("");
 			this.redis.boundValueOps(sessionKey).expire(sessionExpireInSeconds, TimeUnit.SECONDS);
 		}
@@ -141,6 +146,7 @@ final class RedisSessionExpirationPolicy {
 	 * By trying to access the session we only trigger a deletion if it the TTL is
 	 * expired. This is done to handle
 	 * https://github.com/spring-projects/spring-session/issues/93
+	 *
 	 * @param key the key
 	 */
 	private void touch(String key) {

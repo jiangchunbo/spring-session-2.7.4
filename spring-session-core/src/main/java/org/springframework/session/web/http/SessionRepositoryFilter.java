@@ -94,6 +94,9 @@ public class SessionRepositoryFilter<S extends Session> extends OncePerRequestFi
 	 */
 	public static final String INVALID_SESSION_ID_ATTR = SESSION_REPOSITORY_ATTR + ".invalidSessionId";
 
+	/**
+	 * 一个特殊的属性名，通过这个属性名，可以找到 ServletRequest 中的 HttpSessionWrapper 对象
+	 */
 	private static final String CURRENT_SESSION_ATTR = SESSION_REPOSITORY_ATTR + ".CURRENT_SESSION";
 
 	/**
@@ -204,10 +207,17 @@ public class SessionRepositoryFilter<S extends Session> extends OncePerRequestFi
 
 		private final HttpServletResponse response;
 
+		/**
+		 * 从本次请求中解析到的 Session 对象
+		 */
 		private S requestedSession;
 
 		/**
-		 * 这个属性就是标志是否初始化过会话
+		 * 用于控制是否需要解析 Session 对象。
+		 * <p>
+		 * 因为 S 未必可以解析到，所以不可能以 S 是否为 null 作为已经解析过的依据，所以增加此字段来控制。
+		 * <p>
+		 * 可以将该字段置为 false，重新进行解析。
 		 */
 		private boolean requestedSessionCached;
 
@@ -267,7 +277,9 @@ public class SessionRepositoryFilter<S extends Session> extends OncePerRequestFi
 		}
 
 		/**
-		 * 设置当前会话。这个方法不仅可以设置会话，还有清除会话
+		 * 设置当前会话
+		 * <p>
+		 * 这个属性的作用，你可以理解为本地缓存与远程缓存
 		 */
 		private void setCurrentSession(HttpSessionWrapper currentSession) {
 			if (currentSession == null) {
@@ -328,7 +340,7 @@ public class SessionRepositoryFilter<S extends Session> extends OncePerRequestFi
 
 		@Override
 		public HttpSessionWrapper getSession(boolean create) {
-			// 获得 current session (从 request attribute)
+			// 获取本地缓存的 Session
 			HttpSessionWrapper currentSession = getCurrentSession();
 			if (currentSession != null) {
 				return currentSession;
@@ -363,23 +375,41 @@ public class SessionRepositoryFilter<S extends Session> extends OncePerRequestFi
 				// 标记一个属性，告诉 session 是无效的
 				setAttribute(INVALID_SESSION_ID_ATTR, "true");
 			}
+
+
+			// 如果不需要创建新的 Session，那么直接返回 null
 			if (!create) {
 				return null;
 			}
+
+
+			// 接下来，为客户端创建新的会话
+
+			// 创建新的会话对象，可能需要告诉客户端，所以可能执行 HttpSessionIdResolver 的方法 setSessionId
+			// 但是，如果使用 Cookie，response 却已经提交，那么需要报错
+			// 其实如果类型是 HeaderHttpSessionIdResolver，response 提交，也不支持
 			if (SessionRepositoryFilter.this.httpSessionIdResolver instanceof CookieHttpSessionIdResolver
 					&& this.response.isCommitted()) {
 				throw new IllegalStateException("Cannot create a session after the response has been committed");
 			}
+
+
 			if (SESSION_LOGGER.isDebugEnabled()) {
 				SESSION_LOGGER.debug(
 						"A new session was created. To help you troubleshoot where the session was created we provided a StackTrace (this is not an error). You can prevent this from appearing by disabling DEBUG logging for "
 								+ SESSION_LOGGER_NAME,
 						new RuntimeException("For debugging purposes only (not an error)"));
 			}
+
+
+			// 使用 Session 仓库创建 Session，然后做一些初始化，其实也就是 touch 一下，设置最后一次访问时间
 			S session = SessionRepositoryFilter.this.sessionRepository.createSession();
 			session.setLastAccessedTime(Instant.now());
+
+			// 将 Session 包装到 HttpSessionWrapper，得到一个 currentSession，设置到 request attribute 中
 			currentSession = new HttpSessionWrapper(session, getServletContext());
 			setCurrentSession(currentSession);
+
 			return currentSession;
 		}
 
