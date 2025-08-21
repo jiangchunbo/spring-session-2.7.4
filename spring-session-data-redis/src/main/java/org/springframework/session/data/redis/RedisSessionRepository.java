@@ -71,7 +71,7 @@ public class RedisSessionRepository implements SessionRepository<RedisSessionRep
 
 	/**
 	 * Create a new {@link RedisSessionRepository} instance.
-	 * @param sessionRedisOperations the {@link RedisOperations} to use for managing
+	 * @param sessionRedisOperations the {@link RedisOperations} to use for managingl
 	 * sessions
 	 */
 	public RedisSessionRepository(RedisOperations<String, Object> sessionRedisOperations) {
@@ -249,7 +249,10 @@ public class RedisSessionRepository implements SessionRepository<RedisSessionRep
 
 		@Override
 		public <T> T getAttribute(String attributeName) {
+			// 从本地缓存获取属性
 			T attributeValue = this.cached.getAttribute(attributeName);
+
+			// 如果是 saveMode 是 ON_GET_ATTRIBUTE，意思就是需要保存，先放到 delta 中
 			if (attributeValue != null && RedisSessionRepository.this.saveMode.equals(SaveMode.ON_GET_ATTRIBUTE)) {
 				this.delta.put(getAttributeKey(attributeName), attributeValue);
 			}
