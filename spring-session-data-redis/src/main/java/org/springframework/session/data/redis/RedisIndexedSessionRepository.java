@@ -508,6 +508,11 @@ public class RedisIndexedSessionRepository
 		return loaded;
 	}
 
+	/**
+	 * 给定 sessionId 删除会话
+	 *
+	 * @param sessionId the {@link org.springframework.session.Session#getId()} to delete
+	 */
 	@Override
 	public void deleteById(String sessionId) {
 		RedisSession session = getSession(sessionId, true);
