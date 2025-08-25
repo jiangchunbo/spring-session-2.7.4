@@ -36,7 +36,10 @@ subprojects {
 
 	plugins.withType(JavaPlugin) {
 		sourceCompatibility = JavaVersion.VERSION_1_8
-	}
+
+        // 禁用 javadoc 任务
+        javadoc.enabled = false
+    }
 
 	tasks.withType(Test) {
 		useJUnitPlatform()

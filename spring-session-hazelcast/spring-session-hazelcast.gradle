@@ -23,8 +23,8 @@ dependencies {
 	testRuntimeOnly project(':hazelcast4')
 	testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine"
 
-	integrationTestCompile "com.hazelcast:hazelcast-client"
-	integrationTestCompile "org.testcontainers:testcontainers"
+//	integrationTestCompile "com.hazelcast:hazelcast-client"
+//	integrationTestCompile "org.testcontainers:testcontainers"
 }
 
 jar {

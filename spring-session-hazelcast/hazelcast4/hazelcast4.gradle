@@ -35,8 +35,8 @@ dependencies {
     testImplementation "org.springframework.security:spring-security-web"
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine"
 
-    integrationTestCompile "org.testcontainers:testcontainers"
-    integrationTestCompile "com.hazelcast:hazelcast:4.2.4"
-    integrationTestCompile project(":spring-session-hazelcast")
+//    integrationTestCompile "org.testcontainers:testcontainers"
+//    integrationTestCompile "com.hazelcast:hazelcast:4.2.4"
+//    integrationTestCompile project(":spring-session-hazelcast")
 }
 

@@ -21,6 +21,6 @@ dependencies {
 	testImplementation "org.junit.jupiter:junit-jupiter-api"
 	testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine"
 
-	integrationTestCompile "io.lettuce:lettuce-core"
-	integrationTestCompile "org.testcontainers:testcontainers"
+//	integrationTestCompile "io.lettuce:lettuce-core"
+//	integrationTestCompile "org.testcontainers:testcontainers"
 }
