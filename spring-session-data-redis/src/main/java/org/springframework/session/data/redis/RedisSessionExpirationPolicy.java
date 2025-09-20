@@ -79,12 +79,24 @@ final class RedisSessionExpirationPolicy {
 		this.redis.boundSetOps(expireKey).remove(entryToRemove);
 	}
 
+	/**
+	 * 删除原先可能存在的分钟集合中的元素
+	 *
+	 * @param originalExpirationTimeInMilli
+	 * @param session
+	 */
 	void onExpirationUpdated(Long originalExpirationTimeInMilli, Session session) {
+		// expires:e3089a07-e30d-49f8-b178-27c8c0ce16f1
 		String keyToExpire = SESSION_EXPIRES_PREFIX + session.getId();
+
+		// 计算出 session 在什么时候过期，然后按照分钟向上取整 -> 批量过期
 		long toExpire = roundUpToNextMinute(expiresInMillis(session));
 
+		// 如果原先访问过了
 		if (originalExpirationTimeInMilli != null) {
+			// 获取原先过期的分钟
 			long originalRoundedUp = roundUpToNextMinute(originalExpirationTimeInMilli);
+			// 如果两次过期的分钟不相等，那么就从之前的集合中删除
 			if (toExpire != originalRoundedUp) {
 				String expireKey = getExpirationKey(originalRoundedUp);
 				this.redis.boundSetOps(expireKey).remove(keyToExpire);
@@ -92,23 +104,36 @@ final class RedisSessionExpirationPolicy {
 		}
 
 		long sessionExpireInSeconds = session.getMaxInactiveInterval().getSeconds();
+
+		// spring:session:sessions:expires:e3089a07-e30d-49f8-b178-27c8c0ce16f1
 		String sessionKey = getSessionKey(keyToExpire);
 
+		// 如果 timeout 设置为 -1，
 		if (sessionExpireInSeconds < 0) {
+			// 确保键是存在的。append -> 追加空字符串
 			this.redis.boundValueOps(sessionKey).append("");
+			// 持久化，就是删除 TTL
 			this.redis.boundValueOps(sessionKey).persist();
+			// 持久化 Session
 			this.redis.boundHashOps(getSessionKey(session.getId())).persist();
 			return;
 		}
 
+		// spring:session:expirations:1758364980000
+		// 在这一分钟过期的 session 集合
 		String expireKey = getExpirationKey(toExpire);
 		BoundSetOperations<Object, Object> expireOperations = this.redis.boundSetOps(expireKey);
 		expireOperations.add(keyToExpire);
 
+		// 真正 session 过期时间是 timeout + 5 分钟
 		long fiveMinutesAfterExpires = sessionExpireInSeconds + TimeUnit.MINUTES.toSeconds(5);
 
+		// spring:session:expirations:1758364980000 -> 这个集合的时间比 timeout 多 5 分钟
 		expireOperations.expire(fiveMinutesAfterExpires, TimeUnit.SECONDS);
+
 		if (sessionExpireInSeconds == 0) {
+			// 如果 session 是立即失效，那么就立即删除
+			// 业务层可以 setMaxInactiveInterval(0) 使得 session 立即失效
 			this.redis.delete(sessionKey);
 		} else {
 			this.redis.boundValueOps(sessionKey).append("");
@@ -118,26 +143,56 @@ final class RedisSessionExpirationPolicy {
 	}
 
 	String getExpirationKey(long expires) {
+		// this.namespace + "expirations:" + expiration
+		// spring:session:expirations: + expiration
 		return this.lookupExpirationKey.apply(expires);
 	}
 
+	/**
+	 * 基于 session 存储的键空间，构造 key
+	 * <p>
+	 * 这个方法不仅用于构造 session 的 key，也用于构造 session expire 的 key
+	 *
+	 * @param sessionId 字符串。通常可以认为是 sessionId，有时候传入的是 expire + sessionId
+	 * @return redis key
+	 */
 	String getSessionKey(String sessionId) {
+		// this.namespace + "sessions:" + sessionId;
+		// "spring:session" + "sessions:" + sessionId
+		// 通过这个 key 可以寻找到 session 对象
 		return this.lookupSessionKey.apply(sessionId);
 	}
 
+	/**
+	 * 这个方法没有访问修饰符，所以只能被同一个包访问
+	 * <p>
+	 * 这个方法被 RedisIndexedSessionRepository 类使用，定时地调用清理 Session
+	 */
 	void cleanExpiredSessions() {
 		long now = System.currentTimeMillis();
+
+		// 获得时间戳，然后向下取整(按分钟)
 		long prevMin = roundDownMinute(now);
 
 		if (logger.isDebugEnabled()) {
 			logger.debug("Cleaning up sessions expiring at " + new Date(prevMin));
 		}
 
+		// 得到一个跟分钟整点相关的 key
 		String expirationKey = getExpirationKey(prevMin);
+
+		// 得到所有 member，这些都是需要过期的 -> 意思就是说，这一分钟已经过期的
 		Set<Object> sessionsToExpire = this.redis.boundSetOps(expirationKey).members();
+
+		// 清除这个 key，那么所有 member 也消失了
 		this.redis.delete(expirationKey);
+
+		// 遍历这些即将过期的 session
 		for (Object session : sessionsToExpire) {
+			// 获取 session 对象的 key
 			String sessionKey = getSessionKey((String) session);
+
+			// 触摸一下，触发 redis 过期
 			touch(sessionKey);
 		}
 	}
@@ -153,9 +208,17 @@ final class RedisSessionExpirationPolicy {
 		this.redis.hasKey(key);
 	}
 
+	/**
+	 * 计算出这个 session 在什么时候会过期。单位：毫秒。
+	 *
+	 * @param session 会话对象
+	 * @return 过期时间戳。单位：毫秒。
+	 */
 	static long expiresInMillis(Session session) {
 		int maxInactiveInSeconds = (int) session.getMaxInactiveInterval().getSeconds();
 		long lastAccessedTimeInMillis = session.getLastAccessedTime().toEpochMilli();
+
+		// 上次访问时间 + timeout
 		return lastAccessedTimeInMillis + TimeUnit.SECONDS.toMillis(maxInactiveInSeconds);
 	}
 

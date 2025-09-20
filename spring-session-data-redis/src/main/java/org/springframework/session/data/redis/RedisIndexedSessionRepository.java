@@ -860,6 +860,7 @@ public class RedisIndexedSessionRepository
 
 			this.delta = new HashMap<>(this.delta.size());
 
+			// 计算原先的过期时间 -> last access time + timeout
 			Long originalExpiration = (this.originalLastAccessTime != null)
 					? this.originalLastAccessTime.plus(getMaxInactiveInterval()).toEpochMilli() : null;
 			RedisIndexedSessionRepository.this.expirationPolicy.onExpirationUpdated(originalExpiration, this);
