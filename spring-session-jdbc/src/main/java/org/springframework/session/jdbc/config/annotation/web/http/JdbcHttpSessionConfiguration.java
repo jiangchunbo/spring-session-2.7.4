@@ -71,8 +71,8 @@ import org.springframework.util.StringValueResolver;
  *
  * @author Vedran Pavic
  * @author Eddú Meléndez
- * @since 1.2.0
  * @see EnableJdbcHttpSession
+ * @since 1.2.0
  */
 @Configuration(proxyBeanMethods = false)
 public class JdbcHttpSessionConfiguration extends SpringHttpSessionConfiguration
@@ -129,19 +129,16 @@ public class JdbcHttpSessionConfiguration extends SpringHttpSessionConfiguration
 		}
 		if (this.lobHandler != null) {
 			sessionRepository.setLobHandler(this.lobHandler);
-		}
-		else if (requiresTemporaryLob(this.dataSource)) {
+		} else if (requiresTemporaryLob(this.dataSource)) {
 			DefaultLobHandler lobHandler = new DefaultLobHandler();
 			lobHandler.setCreateTemporaryLob(true);
 			sessionRepository.setLobHandler(lobHandler);
 		}
 		if (this.springSessionConversionService != null) {
 			sessionRepository.setConversionService(this.springSessionConversionService);
-		}
-		else if (this.conversionService != null) {
+		} else if (this.conversionService != null) {
 			sessionRepository.setConversionService(this.conversionService);
-		}
-		else {
+		} else {
 			sessionRepository.setConversionService(createConversionServiceWithBeanClassLoader(this.classLoader));
 		}
 		this.sessionRepositoryCustomizers
@@ -153,8 +150,7 @@ public class JdbcHttpSessionConfiguration extends SpringHttpSessionConfiguration
 		try {
 			String productName = JdbcUtils.extractDatabaseMetaData(dataSource, "getDatabaseProductName");
 			return "Oracle".equalsIgnoreCase(JdbcUtils.commonDatabaseName(productName));
-		}
-		catch (MetaDataAccessException ex) {
+		} catch (MetaDataAccessException ex) {
 			return false;
 		}
 	}
@@ -181,7 +177,7 @@ public class JdbcHttpSessionConfiguration extends SpringHttpSessionConfiguration
 
 	@Autowired
 	public void setDataSource(@SpringSessionDataSource ObjectProvider<DataSource> springSessionDataSource,
-			ObjectProvider<DataSource> dataSource) {
+							  ObjectProvider<DataSource> dataSource) {
 		DataSource dataSourceToUse = springSessionDataSource.getIfAvailable();
 		if (dataSourceToUse == null) {
 			dataSourceToUse = dataSource.getObject();
@@ -279,6 +275,8 @@ public class JdbcHttpSessionConfiguration extends SpringHttpSessionConfiguration
 
 	/**
 	 * Configuration of scheduled job for cleaning up expired sessions.
+	 * <p>
+	 * 能够获取 ScheduledTaskRegistrar 这个对象并进行一些操纵
 	 */
 	@EnableScheduling
 	@Configuration(proxyBeanMethods = false)
@@ -292,6 +290,7 @@ public class JdbcHttpSessionConfiguration extends SpringHttpSessionConfiguration
 
 		@Override
 		public void configureTasks(ScheduledTaskRegistrar taskRegistrar) {
+			// 向其中注册了一个 cron task
 			taskRegistrar.addCronTask(this.sessionRepository::cleanUpExpiredSessions,
 					JdbcHttpSessionConfiguration.this.cleanupCron);
 		}
