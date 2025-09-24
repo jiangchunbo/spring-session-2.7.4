@@ -188,6 +188,9 @@ public class SessionRepositoryFilter<S extends Session> extends OncePerRequestFi
 			this.request = request;
 		}
 
+		/**
+		 * 在任何
+		 */
 		@Override
 		protected void onResponseCommitted() {
 			this.request.commitSession();

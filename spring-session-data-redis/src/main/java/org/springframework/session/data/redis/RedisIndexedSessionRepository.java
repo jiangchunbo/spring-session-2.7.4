@@ -416,8 +416,11 @@ public class RedisIndexedSessionRepository
 	private void configureSessionChannels() {
 		this.sessionCreatedChannelPrefix = this.namespace + "event:" + this.database + ":created:";
 		this.sessionCreatedChannelPrefixBytes = this.sessionCreatedChannelPrefix.getBytes();
+
+		// 由于这里是 keyevent -> 需要开启 keyspace notification 的 "E"
 		this.sessionDeletedChannel = "__keyevent@" + this.database + "__:del";
 		this.sessionDeletedChannelBytes = this.sessionDeletedChannel.getBytes();
+
 		this.sessionExpiredChannel = "__keyevent@" + this.database + "__:expired";
 		this.sessionExpiredChannelBytes = this.sessionExpiredChannel.getBytes();
 		this.expiredKeyPrefix = this.namespace + "sessions:expires:";
@@ -478,14 +481,22 @@ public class RedisIndexedSessionRepository
 	 * @return the Redis session
 	 */
 	private RedisSession getSession(String id, boolean allowExpired) {
+		// 从 Redis 查询 session id 对应的 hash
 		Map<Object, Object> entries = getSessionBoundHashOperations(id).entries();
 		if (entries.isEmpty()) {
 			return null;
 		}
+
+		// 将 hash 转换为 MapSession
 		MapSession loaded = loadSession(id, entries);
+
+		// 由于 hash 通常会设置比真正的过期时间长 5 分钟
+		// 所以，这里需要判断一下
 		if (!allowExpired && loaded.isExpired()) {
 			return null;
 		}
+
+		// 如果 session 是从 redis 获取的，那么它一定不是新的 (isNew)
 		RedisSession result = new RedisSession(loaded, false);
 		result.originalLastAccessTime = loaded.getLastAccessedTime();
 		return result;
@@ -536,7 +547,10 @@ public class RedisIndexedSessionRepository
 		if (this.defaultMaxInactiveInterval != null) {
 			cached.setMaxInactiveInterval(Duration.ofSeconds(this.defaultMaxInactiveInterval));
 		}
+
+		// isNew -> 这是一个新的 Session
 		RedisSession session = new RedisSession(cached, true);
+		// 立即刷数据
 		session.flushImmediateIfNecessary();
 		return session;
 	}
@@ -545,6 +559,8 @@ public class RedisIndexedSessionRepository
 	public void onMessage(Message message, byte[] pattern) {
 		byte[] messageChannel = message.getChannel();
 
+		// 1. 发出通知
+		// this.namespace + "event:" + this.database + ":created:"
 		if (ByteUtils.startsWith(messageChannel, this.sessionCreatedChannelPrefixBytes)) {
 			// TODO: is this thread safe?
 			@SuppressWarnings("unchecked")
@@ -730,9 +746,14 @@ public class RedisIndexedSessionRepository
 		RedisSession(MapSession cached, boolean isNew) {
 			this.cached = cached;
 			this.isNew = isNew;
+
+			// 记录 original session id
 			this.originalSessionId = cached.getId();
+
+			// 记录 original principal name
 			Map<String, String> indexes = RedisIndexedSessionRepository.this.indexResolver.resolveIndexesFor(this);
 			this.originalPrincipalName = indexes.get(PRINCIPAL_NAME_INDEX_NAME);
+
 			if (this.isNew) {
 				this.delta.put(RedisSessionMapper.CREATION_TIME_KEY, cached.getCreationTime().toEpochMilli());
 				this.delta.put(RedisSessionMapper.MAX_INACTIVE_INTERVAL_KEY,
@@ -825,6 +846,7 @@ public class RedisIndexedSessionRepository
 		}
 
 		private void save() {
+			// 保存修改的 sessionId ?
 			saveChangeSessionId();
 			saveDelta();
 		}
@@ -867,10 +889,15 @@ public class RedisIndexedSessionRepository
 		}
 
 		private void saveChangeSessionId() {
+			// 获取当前的 sessionId
 			String sessionId = getId();
+
+			// 如果当前 sessionId 等于原始 sessionId -> 没有修改 sessionId
 			if (sessionId.equals(this.originalSessionId)) {
 				return;
 			}
+
+
 			if (!this.isNew) {
 				String originalSessionIdKey = getSessionKey(this.originalSessionId);
 				String sessionIdKey = getSessionKey(sessionId);

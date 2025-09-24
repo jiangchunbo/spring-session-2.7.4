@@ -64,12 +64,18 @@ abstract class OnCommittedResponseWrapper extends HttpServletResponseWrapper {
 		super.addHeader(name, value);
 	}
 
+	/**
+	 * setContentLength 方法似乎会记录下来 contentLength
+	 */
 	@Override
 	public void setContentLengthLong(long len) {
 		setContentLength(len);
 		super.setContentLengthLong(len);
 	}
 
+	/**
+	 * setContentLength 方法似乎会记录下来 contentLength
+	 */
 	@Override
 	public void setContentLength(int len) {
 		setContentLength((long) len);
@@ -77,6 +83,7 @@ abstract class OnCommittedResponseWrapper extends HttpServletResponseWrapper {
 	}
 
 	private void setContentLength(long len) {
+		// 记录
 		this.contentLength = len;
 		checkContentLength(0);
 	}
