@@ -894,6 +894,9 @@ public class RedisIndexedSessionRepository
 			RedisIndexedSessionRepository.this.expirationPolicy.onExpirationUpdated(originalExpiration, this);
 		}
 
+		/**
+		 * 只有当你的 SessionId 改变了才会考虑保存修改的 SessionId
+		 */
 		private void saveChangeSessionId() {
 			// 获取当前的 sessionId
 			String sessionId = getId();
@@ -904,7 +907,7 @@ public class RedisIndexedSessionRepository
 			}
 
 
-			// 如果不是新的会话 ID，可能是没有改变 sessionId，或者是 sessionId 只是迁移
+			// 不是新会话（一般考虑使用了默认的 ChangeSessionId 策略）
 			if (!this.isNew) {
 				String originalSessionIdKey = getSessionKey(this.originalSessionId);
 				String sessionIdKey = getSessionKey(sessionId);

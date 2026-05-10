@@ -303,7 +303,7 @@ public class SessionRepositoryFilter<S extends Session> extends OncePerRequestFi
 						"Cannot change session ID. There is no session associated with this request.");
 			}
 
-			// 获取 Spring Session 调用 changeSessionId
+			// 获取 （属性里的）Spring Session 调用 changeSessionId
 			return getCurrentSession().getSession().changeSessionId();
 		}
 
