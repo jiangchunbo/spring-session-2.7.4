@@ -189,7 +189,7 @@ public class SessionRepositoryFilter<S extends Session> extends OncePerRequestFi
 		}
 
 		/**
-		 * 在任何
+		 * 在任何方式的响应提交之前做一些与 session 有关的事情
 		 */
 		@Override
 		protected void onResponseCommitted() {
@@ -262,8 +262,9 @@ public class SessionRepositoryFilter<S extends Session> extends OncePerRequestFi
 
 				clearRequestedSessionCache();
 
-				// 保存到仓库中
+				// 在响应提交之前，保存到仓库中
 				SessionRepositoryFilter.this.sessionRepository.save(session);
+
 				String sessionId = session.getId();
 				if (!isRequestedSessionIdValid() || !sessionId.equals(getRequestedSessionId())) {
 					SessionRepositoryFilter.this.httpSessionIdResolver.setSessionId(this, this.response, sessionId);

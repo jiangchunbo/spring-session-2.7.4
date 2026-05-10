@@ -460,7 +460,7 @@ public class RedisIndexedSessionRepository
 		if (!PRINCIPAL_NAME_INDEX_NAME.equals(indexName)) {
 			return Collections.emptyMap();
 		}
-		String principalKey = getPrincipalKey(indexValue);
+		String principalKey = getPrincipalKey(indexValue); // findByIndexNameAndIndexValue
 		Set<Object> sessionIds = this.sessionRedisOperations.boundSetOps(principalKey).members();
 		Map<String, RedisSession> sessions = new HashMap<>(sessionIds.size());
 		for (Object id : sessionIds) {
@@ -550,8 +550,9 @@ public class RedisIndexedSessionRepository
 
 		// isNew -> 这是一个新的 Session
 		RedisSession session = new RedisSession(cached, true);
-		// 立即刷数据
+		// 刷到 redis
 		session.flushImmediateIfNecessary();
+
 		return session;
 	}
 
@@ -737,6 +738,11 @@ public class RedisIndexedSessionRepository
 
 		private Map<String, Object> delta = new HashMap<>();
 
+		/**
+		 * 如何才算新 session，要看 session 固定策略
+		 * <p>
+		 * 如果是登录态再次调用登录，通常可能产生新的 session id，如果这个 session id 是 copy 类型，那么就是 new，如果是迁移类型，就是 false
+		 */
 		private boolean isNew;
 
 		private String originalPrincipalName;
@@ -846,7 +852,7 @@ public class RedisIndexedSessionRepository
 		}
 
 		private void save() {
-			// 保存修改的 sessionId ?
+			// 保存修改的 sessionId （可能是已经登录状态再次调用登录，会话属性可能拷贝，可能迁移）
 			saveChangeSessionId();
 			saveDelta();
 		}
@@ -898,10 +904,12 @@ public class RedisIndexedSessionRepository
 			}
 
 
+			// 如果不是新的会话 ID，可能是没有改变 sessionId，或者是 sessionId 只是迁移
 			if (!this.isNew) {
 				String originalSessionIdKey = getSessionKey(this.originalSessionId);
 				String sessionIdKey = getSessionKey(sessionId);
 				try {
+					// Redis 迁移（可能发生不再同一个分片报错）
 					RedisIndexedSessionRepository.this.sessionRedisOperations.rename(originalSessionIdKey,
 							sessionIdKey);
 				} catch (NonTransientDataAccessException ex) {
