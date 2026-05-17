@@ -91,6 +91,8 @@ public class SessionRepositoryFilter<S extends Session> extends OncePerRequestFi
 
 	/**
 	 * Invalid session id (not backed by the session repository) request attribute name.
+	 * <p>
+	 * 缓存在一个请求中的判断结果，判断本次请求的 session 是否是无效的
 	 */
 	public static final String INVALID_SESSION_ID_ATTR = SESSION_REPOSITORY_ATTR + ".invalidSessionId";
 
@@ -160,7 +162,7 @@ public class SessionRepositoryFilter<S extends Session> extends OncePerRequestFi
 
 	@Override
 	protected void doFilterNestedErrorDispatch(HttpServletRequest request, HttpServletResponse response,
-											   FilterChain filterChain) throws ServletException, IOException {
+	                                           FilterChain filterChain) throws ServletException, IOException {
 		doFilterInternal(request, response, filterChain);
 	}
 
@@ -350,14 +352,12 @@ public class SessionRepositoryFilter<S extends Session> extends OncePerRequestFi
 				return currentSession;
 			}
 
-			// 从 request 解析 sessionId 并尝试获取 session
-			// 为什么是尝试呢？因为可能获取不到，那么返回 null
+			// 解析 sessionId 检索有效的 session
 			S requestedSession = getRequestedSession();
 
-
 			if (requestedSession != null) {
+				// Spring Session 只相信第一次的判断，第一次判断无效，以后就算有效也不会理会
 				if (getAttribute(INVALID_SESSION_ID_ATTR) == null) {
-
 					// 设置最后一次访问时间
 					requestedSession.setLastAccessedTime(Instant.now());
 
@@ -375,8 +375,7 @@ public class SessionRepositoryFilter<S extends Session> extends OncePerRequestFi
 					SESSION_LOGGER.debug(
 							"No session found by id: Caching result for getSession(false) for this HttpServletRequest.");
 				}
-
-				// 标记一个属性，告诉 session 是无效的
+				// 本次请求的 session 是无效的
 				setAttribute(INVALID_SESSION_ID_ATTR, "true");
 			}
 
@@ -437,39 +436,24 @@ public class SessionRepositoryFilter<S extends Session> extends OncePerRequestFi
 		}
 
 		private S getRequestedSession() {
-
-			// requestedSessionCached 只有 1 次
-
+			// 标记有没有执行过这个方法
 			if (!this.requestedSessionCached) {
-
-				// @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-
 				// 调用重要的 HttpSessionIdResolver 解析 SessionId
 				List<String> sessionIds = SessionRepositoryFilter.this.httpSessionIdResolver.resolveSessionIds(this);
-
-				// 可能解析多个
 				for (String sessionId : sessionIds) {
-					// init: 只是初始化而已
 					if (this.requestedSessionId == null) {
+						// 初始化赋值第一个 sessionId(有可能是个无效的 sessionId 也赋值到这里了，但是如果是无效 sessionId，requestedSession 一定是 null)
 						this.requestedSessionId = sessionId;
 					}
-
-					// 从仓库找这和会话对象
+					// 找到一个没有过期的会话对象(可能过期了还可以拿到)
 					S session = SessionRepositoryFilter.this.sessionRepository.findById(sessionId);
-
-					// 如果找到了这个会话对象，就表示这是有效的 Session ID
 					if (session != null) {
-						// 记录下这个有效的会话对象
+						// 记录下这个有效的会话对象，然后 break !
 						this.requestedSession = session;
-						// 如果会话对象是真实的，就覆盖，如果从未覆盖，那么就可能解析到一个无效的会话ID
-						// 所以 requestedSessionId 可能有效、可能无效
 						this.requestedSessionId = sessionId;
 						break;
 					}
 				}
-
-				// @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-
 				this.requestedSessionCached = true;
 			}
 			return this.requestedSession;
